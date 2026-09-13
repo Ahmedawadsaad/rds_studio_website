@@ -1,0 +1,10 @@
+{
+  "description": "Create flawless designs and animations effortlessly with intuitive tools that enhance creativity and streamline your visual projects.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

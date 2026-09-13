@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+
+  --color-background: #0c0b09;
+  --color-foreground: #f0e8d5;
+  --color-card: #141210;
+  --color-card-foreground: #f0e8d5;
+  --color-primary: #c9a46a;
+  --color-primary-foreground: #0c0b09;
+  --color-secondary: #3d4535;
+  --color-secondary-foreground: #a8b898;
+  --color-muted: #1c1a16;
+  --color-muted-foreground: #7a6e5e;
+  --color-accent: #c9a46a;
+  --color-accent-foreground: #0c0b09;
+  --color-border: #282318;
+  --color-ring: #c9a46a;
+  --radius: 0rem;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+*::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Loading screen ── */
+@keyframes draw-monogram {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes mono-fill {
+  from { fill-opacity: 0; }
+  to   { fill-opacity: 0.08; }
+}
+@keyframes loading-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}
+.monogram-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-monogram 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.loading-screen-exit {
+  animation: loading-fade-out 0.8s ease forwards;
+}
+
+/* ── Villa SVG draw ── */
+@keyframes draw-path {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+.villa-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-path 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ── Scroll reveals ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(36px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes reveal-mask {
+  from { clip-path: inset(0 0 100% 0); }
+  to   { clip-path: inset(0 0 0% 0); }
+}
+.reveal { opacity: 0; }
+.reveal.visible {
+  animation: fade-up 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.reveal-mask { clip-path: inset(0 0 100% 0); }
+.reveal-mask.visible {
+  animation: reveal-mask 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ── Filter underline slide ── */
+.filter-tab-active {
+  position: relative;
+}
+.filter-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #c9a46a;
+  transform-origin: left;
+  animation: tab-underline 0.3s ease forwards;
+}
+@keyframes tab-underline {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Horizontal scroll strip ── */
+.materials-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Magnetic button ── */
+.magnetic-btn {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Admin sidebar ── */
+.admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  color: #7a6e5e;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-left: 2px solid transparent;
+  transition: all 0.2s;
+}
+.admin-sidebar-link:hover {
+  color: #f0e8d5;
+  border-left-color: #282318;
+}
+.admin-sidebar-link.active {
+  color: #c9a46a;
+  border-left-color: #c9a46a;
+  background: rgba(201, 164, 106, 0.06);
+}
+
+/* ── Grid stagger ── */
+@keyframes grid-in {
+  from { opacity: 0; transform: scale(0.97) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+.grid-item-enter {
+  animation: grid-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
