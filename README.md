@@ -16,10 +16,11 @@ The frontend is a Next.js app that renders the public website and admin panel.
 - `src/lib/api.ts` — API client used by the frontend
 
 ### Backend
-The backend is an Express + Supabase API for auth and content management.
+The backend is implemented as Next.js API routes with Supabase for auth and content management.
 
 - `server/index.js` — API entry point
-- `server/supabase.js` — Supabase client and Auth helpers
+- `lib/supabaseAdmin.ts` — server-only Supabase client
+- `pages/api/[...path].ts` — API routes
 - `supabase/schema.sql` — database tables and policies
 
 ### Root config
@@ -61,28 +62,19 @@ The backend is an Express + Supabase API for auth and content management.
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    CLIENT_URL=http://localhost:5173
    NEXT_PUBLIC_API_URL=/api
-   API_SERVER_URL=http://localhost:5000
-   CLOUDINARY_CLOUD_NAME=your-cloud-name
-   CLOUDINARY_API_KEY=your-api-key
-   CLOUDINARY_API_SECRET=your-api-secret
    ```
 
-4. Start the backend:
-   ```bash
-   npm run server
-   ```
-
-5. Start the frontend:
+4. Start the app:
    ```bash
    npm run dev
    ```
 
-6. Open the app in the browser:
+5. Open the app in the browser:
    ```text
    http://localhost:5173
    ```
 
-7. Open the admin page:
+6. Open the admin page:
    ```text
    http://localhost:5173/admin
    ```
@@ -139,23 +131,18 @@ Deploy the frontend and API together behind one domain when possible. Configure 
 PORT=5000
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-CLIENT_URL=https://your-domain.com
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
 ```
 
-If the frontend and API use different domains, set `NEXT_PUBLIC_API_URL=/api` and `API_SERVER_URL=https://api.your-domain.com` in the frontend deployment, then set `CLIENT_URL` to the frontend domain. The backend start command is `npm start`.
+The frontend and API are now deployed together on Vercel. No Render service or API URL variable is needed.
 
-Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configured. The API uploads the image and stores only its secure CDN URL in Supabase. Without those variables, local development falls back to Data URLs.
+Image uploads use the public `project-images` Supabase Storage bucket, and only public image URLs are stored in Supabase tables.
 
 ---
 
 ## Deploying to Production
 
 ### Recommended setup
-- Frontend: Vercel or Netlify
-- Backend: Render or Railway
+- Frontend and API: Vercel
 - Database and Auth: Supabase
 
 ### Required environment variables in production
@@ -163,7 +150,8 @@ Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configu
 PORT=5000
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-CLIENT_URL=https://your-domain.com
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ---
@@ -181,5 +169,5 @@ For production usage, the admin panel should be used to keep content managed fro
 ## Notes
 
 - The frontend has a fallback to local static data when the backend is not reachable.
-- Run `supabase/schema.sql` in Supabase SQL Editor before starting the API.
+- Run `supabase/schema.sql` in Supabase SQL Editor before deploying.
 - This setup is intended for a portfolio site where the public site stays read-only and only admin users can edit the content.

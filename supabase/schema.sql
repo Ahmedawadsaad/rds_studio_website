@@ -39,6 +39,10 @@ create table if not exists public.site_settings (
   updated_at timestamptz not null default now()
 );
 
+insert into storage.buckets (id, name, public)
+values ('project-images', 'project-images', true)
+on conflict (id) do update set public = true;
+
 alter table public.projects enable row level security;
 alter table public.categories enable row level security;
 alter table public.admin_profiles enable row level security;
