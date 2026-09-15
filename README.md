@@ -142,7 +142,7 @@ CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
 
-If the frontend and API use different domains, set `VITE_API_URL=https://api.your-domain.com/api` before running `npm run build`, and set `CLIENT_URL` to the frontend domain. The backend start command is `npm start`.
+If the frontend and API use different domains, set `NEXT_PUBLIC_API_URL=/api` and `API_SERVER_URL=https://api.your-domain.com` in the frontend deployment, then set `CLIENT_URL` to the frontend domain. The backend start command is `npm start`.
 
 Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configured. The API uploads the image and stores only its secure CDN URL in MongoDB. Without those variables, local development falls back to Data URLs.
 
