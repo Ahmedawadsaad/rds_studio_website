@@ -5,7 +5,7 @@ A full-stack studio portfolio website with a public-facing read-only experience 
 ## Project Structure
 
 ### Frontend
-The frontend is a React + Vite app that renders the public website and admin panel.
+The frontend is a Next.js app that renders the public website and admin panel.
 
 - `src/App.tsx` — router setup
 - `src/pages/PublicSite.tsx` — public portfolio landing page
@@ -16,18 +16,15 @@ The frontend is a React + Vite app that renders the public website and admin pan
 - `src/lib/api.ts` — API client used by the frontend
 
 ### Backend
-The backend is an Express + MongoDB API for auth and content management.
+The backend is an Express + Supabase API for auth and content management.
 
 - `server/index.js` — API entry point
-- `server/db.js` — MongoDB connection bootstrapping
-- `server/models/AdminUser.js` — admin user model
-- `server/models/Project.js` — project model
-- `server/models/Category.js` — category model
+- `server/supabase.js` — Supabase client and Auth helpers
+- `supabase/schema.sql` — database tables and policies
 
 ### Root config
 - `package.json` — frontend + backend scripts
-- `vite.config.ts` — Vite config
-- `index.html` — Vite HTML shell
+- `next.config.ts` — Next.js configuration and API rewrite
 - `.env` — local environment settings
 - `.env.example` — sample environment variables
 
@@ -36,12 +33,12 @@ The backend is an Express + MongoDB API for auth and content management.
 ## Tech Stack
 
 - React 19
-- Vite 8
+- Next.js 15
 - TypeScript
 - Tailwind CSS v4
 - Express.js
-- MongoDB + Mongoose
-- JWT-based admin auth
+- Supabase Postgres + Supabase Auth
+- Cloudinary image storage
 
 ---
 
@@ -57,13 +54,17 @@ The backend is an Express + MongoDB API for auth and content management.
    copy .env.example .env
    ```
 
-3. Update `.env` with your local MongoDB URI and secret values:
+3. Update `.env` with your Supabase and Cloudinary values:
    ```env
    PORT=5000
-   JWT_SECRET=your-dev-secret
-   MONGODB_URI=mongodb://127.0.0.1:27017/rds-studio
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    CLIENT_URL=http://localhost:5173
-   VITE_API_URL=/api
+   NEXT_PUBLIC_API_URL=/api
+   API_SERVER_URL=http://localhost:5000
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=your-api-key
+   CLOUDINARY_API_SECRET=your-api-secret
    ```
 
 4. Start the backend:
@@ -90,10 +91,12 @@ The backend is an Express + MongoDB API for auth and content management.
 
 ## Admin Login
 
-Default seeded admin account:
+Create the admin account in Supabase Authentication, then add its user ID to `admin_profiles`:
 
-- Email: `admin@rds.com`
-- Password: `rds2024`
+```sql
+insert into public.admin_profiles (id, name, role, company_name)
+values ('SUPABASE_AUTH_USER_ID', 'RDS Admin', 'super-admin', 'Red Door Studio');
+```
 
 ---
 
@@ -109,7 +112,7 @@ Default seeded admin account:
 - Can create new projects
 - Can delete projects
 - Can create categories
-- Stores data in MongoDB
+- Stores data in Supabase
 
 ---
 
@@ -134,8 +137,8 @@ Deploy the frontend and API together behind one domain when possible. Configure 
 
 ```env
 PORT=5000
-JWT_SECRET=<long-random-secret>
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/rds-studio
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 CLIENT_URL=https://your-domain.com
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
@@ -144,7 +147,7 @@ CLOUDINARY_API_SECRET=your-api-secret
 
 If the frontend and API use different domains, set `NEXT_PUBLIC_API_URL=/api` and `API_SERVER_URL=https://api.your-domain.com` in the frontend deployment, then set `CLIENT_URL` to the frontend domain. The backend start command is `npm start`.
 
-Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configured. The API uploads the image and stores only its secure CDN URL in MongoDB. Without those variables, local development falls back to Data URLs.
+Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configured. The API uploads the image and stores only its secure CDN URL in Supabase. Without those variables, local development falls back to Data URLs.
 
 ---
 
@@ -153,13 +156,13 @@ Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configu
 ### Recommended setup
 - Frontend: Vercel or Netlify
 - Backend: Render or Railway
-- Database: MongoDB Atlas
+- Database and Auth: Supabase
 
 ### Required environment variables in production
 ```env
 PORT=5000
-JWT_SECRET=change_this_to_a_secure_value
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/rds-studio
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 CLIENT_URL=https://your-domain.com
 ```
 
@@ -171,12 +174,12 @@ Project content, studio info, categories, and demo images are primarily managed 
 
 - `src/data.ts`
 
-For production usage, the admin panel should be used to keep content managed from MongoDB instead of static fallback data.
+For production usage, the admin panel should be used to keep content managed from Supabase instead of static fallback data.
 
 ---
 
 ## Notes
 
 - The frontend has a fallback to local static data when the backend is not reachable.
-- The backend creates the default admin account automatically on first successful MongoDB connection.
+- Run `supabase/schema.sql` in Supabase SQL Editor before starting the API.
 - This setup is intended for a portfolio site where the public site stays read-only and only admin users can edit the content.

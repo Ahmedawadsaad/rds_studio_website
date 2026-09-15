@@ -37,7 +37,6 @@
   },
   "include": [
     "src",
-    "vite.config.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [
