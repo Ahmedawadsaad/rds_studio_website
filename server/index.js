@@ -9,6 +9,7 @@ import { Project } from "./models/Project.js";
 import { Category } from "./models/Category.js";
 import { AdminUser } from "./models/AdminUser.js";
 import { SiteSettings } from "./models/SiteSettings.js";
+import { hasCloudinaryConfig, storeImage, storeProjectImages } from "./media.js";
 
 dotenv.config();
 
@@ -50,7 +51,7 @@ const isValidObjectId = (value) => typeof value === "string" && /^[a-f\d]{24}$/i
 const defaultHeroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format";
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "RDS API is running" });
+  res.json({ ok: true, message: "RDS API is running", imageStorage: hasCloudinaryConfig() ? "cloudinary" : "database-fallback" });
 });
 
 app.get("/api/projects", async (req, res) => {
@@ -114,7 +115,7 @@ app.get("/api/admin/me", requireAuth, async (req, res) => {
 
 app.post("/api/admin/projects", requireAuth, async (req, res) => {
   try {
-    const payload = req.body;
+    const payload = await storeProjectImages(req.body);
     const project = await Project.create({
       ...payload,
       status: payload.status || "draft",
@@ -164,9 +165,10 @@ app.put("/api/admin/site-settings", requireAuth, async (req, res) => {
     return res.status(400).json({ message: "A valid hero image is required" });
   }
 
+  const storedHeroImage = await storeImage(heroImage, "rds-studio/site");
   const settings = await SiteSettings.findOneAndUpdate(
     { key: "public-site" },
-    { key: "public-site", heroImage },
+    { key: "public-site", heroImage: storedHeroImage },
     { new: true, upsert: true, runValidators: true },
   ).lean();
   return res.json({ heroImage: settings.heroImage });

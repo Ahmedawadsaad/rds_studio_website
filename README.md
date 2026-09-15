@@ -137,11 +137,14 @@ PORT=5000
 JWT_SECRET=<long-random-secret>
 MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/rds-studio
 CLIENT_URL=https://your-domain.com
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
 ```
 
 If the frontend and API use different domains, set `VITE_API_URL=https://api.your-domain.com/api` before running `npm run build`, and set `CLIENT_URL` to the frontend domain. The backend start command is `npm start`.
 
-The current admin image upload stores images as Data URLs in MongoDB. Keep uploads small for now; for production galleries, move image storage to Cloudinary, S3, or another object-storage service and save only image URLs in MongoDB.
+Image uploads use Cloudinary when the three `CLOUDINARY_*` variables are configured. The API uploads the image and stores only its secure CDN URL in MongoDB. Without those variables, local development falls back to Data URLs.
 
 ---
 
