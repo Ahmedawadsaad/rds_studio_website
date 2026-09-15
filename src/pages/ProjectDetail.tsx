@@ -1,20 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useReveal } from "../components/useReveal";
-import { getProjects, type Project } from "../lib/api";
+import { getProject, type Project } from "../lib/api";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
   const [floorTab, setFloorTab] = useState(0);
   const [entered, setEntered] = useState(false);
   const revealRef = useReveal();
 
   useEffect(() => {
     const loadProject = async () => {
-      const allProjects = await getProjects();
-      setProject(allProjects.find((p) => p.id === id) || null);
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setProject(await getProject(id));
+      } catch {
+        setProject(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadProject();
@@ -22,6 +33,16 @@ export default function ProjectDetail() {
     const t = setTimeout(() => setEntered(true), 80);
     return () => clearTimeout(t);
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0c0b09]">
+        <p className="text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>
+          Loading project...
+        </p>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -52,7 +73,7 @@ export default function ProjectDetail() {
         </button>
         <span className="text-[#282318] mx-2">|</span>
         <span
-          className="text-[11px] tracking-[0.2em] uppercase text-[#f0e8d5]/40"
+          className="detail-header-title text-[11px] tracking-[0.2em] uppercase text-[#f0e8d5]/70"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           {project.name}
@@ -69,19 +90,19 @@ export default function ProjectDetail() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09] via-transparent to-[#0c0b09]/30" />
         <div className="absolute bottom-12 left-8 md:left-16">
           <p
-            className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-3"
+            className="detail-hero-meta text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-3"
             style={{ fontFamily: "var(--font-sans)" }}
           >
             {project.category} · {project.year} · {project.area}
           </p>
           <h1
-            className="text-[clamp(2rem,5vw,4rem)] font-light text-[#f0e8d5] leading-[1.05]"
+            className="detail-hero-title text-[clamp(2rem,5vw,4rem)] font-light text-[#f0e8d5] leading-[1.05]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {project.name}
           </h1>
           <p
-            className="text-[13px] text-[#f0e8d5]/50 mt-2"
+            className="detail-hero-location text-[13px] text-[#f0e8d5]/75 mt-2"
             style={{ fontFamily: "var(--font-sans)", fontWeight: 300 }}
           >
             {project.location}

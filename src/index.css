@@ -31,8 +31,48 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
-  cursor: none;
+  cursor: auto;
+  transition: background-color 300ms ease, color 300ms ease;
 }
+
+html[data-theme="light"] body {
+  background-color: #e8dfd1;
+  color: #242321;
+}
+
+html[data-theme="light"] .bg-\[\#0c0b09\] { background-color: #e8dfd1 !important; }
+html[data-theme="light"] .bg-\[\#0e0d0b\],
+html[data-theme="light"] .bg-\[\#11100d\],
+html[data-theme="light"] .bg-\[\#141210\] { background-color: #dcd1c1 !important; }
+html[data-theme="light"] .text-\[\#f0e8d5\] { color: #242321 !important; }
+html[data-theme="light"] .text-\[\#f0e8d5\]\/50,
+html[data-theme="light"] .text-\[\#f0e8d5\]\/60,
+html[data-theme="light"] .text-\[\#f0e8d5\]\/70,
+html[data-theme="light"] .text-\[\#f0e8d5\]\/80,
+html[data-theme="light"] .text-\[\#f0e8d5\]\/90 { color: #4d4a43 !important; }
+html[data-theme="light"] .text-\[\#7a6e5e\] { color: #6d675d !important; }
+html[data-theme="light"] .border-\[\#282318\] { border-color: #d5cec1 !important; }
+html[data-theme="light"] .project-card-title,
+html[data-theme="light"] .project-card-location,
+html[data-theme="light"] .project-card-description { color: #fffaf0 !important; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+html[data-theme="light"] .project-card-meta { color: #f0c777 !important; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75); }
+html[data-theme="light"] .detail-header-title,
+html[data-theme="light"] .detail-hero-title,
+html[data-theme="light"] .detail-hero-location { color: #fffaf0 !important; text-shadow: 0 2px 5px rgba(0, 0, 0, 0.85); }
+html[data-theme="light"] .about-copy { color: #514b42 !important; }
+html[data-theme="light"] .about-stat-label { color: #5d554a !important; }
+html[data-theme="light"] .footer-brand-text { color: #514b42 !important; }
+html[data-theme="light"] .footer-legal,
+html[data-theme="light"] .footer-link { color: #5d554a !important; }
+html[data-theme="light"] .footer-link:hover { color: #8e3d2f !important; }
+html[data-theme="light"] .contact-intro { color: #514b42 !important; }
+html[data-theme="light"] .contact-cta { color: #8e3d2f !important; border-color: #a56a58 !important; }
+html[data-theme="light"] .nav-consultation { color: #6f3d2f !important; border-color: #9c7764 !important; }
+html[data-theme="light"] .nav-consultation:hover { background-color: #8e3d2f !important; color: #fffaf0 !important; }
+html[data-theme="light"] .nav-link { color: #514b42 !important; position: relative; }
+html[data-theme="light"] .nav-link:hover { color: #8e3d2f !important; }
+html[data-theme="light"] .nav-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 2px; background: #8e3d2f; transform: scaleX(0); transform-origin: center; transition: transform 200ms ease; }
+html[data-theme="light"] .nav-link:hover::after { transform: scaleX(1); }
 
 *::-webkit-scrollbar { width: 0; height: 0; }
 

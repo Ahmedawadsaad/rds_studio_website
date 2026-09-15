@@ -2,7 +2,7 @@ import { CATEGORIES as fallbackCategories, PROJECTS as fallbackProjects, type Ca
 
 export type { Category, Project };
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -15,7 +15,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "Request failed");
+    try {
+      const body = JSON.parse(text) as { message?: string };
+      throw new Error(body.message || "Request failed");
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof SyntaxError)) throw error;
+      throw new Error(text || "Request failed");
+    }
   }
 
   return (await response.json()) as T;
@@ -29,6 +35,10 @@ export async function getProjects(): Promise<Project[]> {
   }
 }
 
+export async function getProject(id: string): Promise<Project> {
+  return request<Project>(`/projects/${id}`);
+}
+
 export async function getCategories(): Promise<Category[]> {
   try {
     const categories = await request<Category[]>("/categories");
@@ -36,6 +46,19 @@ export async function getCategories(): Promise<Category[]> {
   } catch {
     return fallbackCategories;
   }
+}
+
+export async function getSiteSettings() {
+  return request<{ heroImage: string }>("/site-settings");
+}
+
+export async function updateSiteSettings(payload: { heroImage: string }) {
+  const token = localStorage.getItem("rds-admin-token");
+  return request<{ heroImage: string }>("/admin/site-settings", {
+    method: "PUT",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function loginAdmin(email: string, password: string) {

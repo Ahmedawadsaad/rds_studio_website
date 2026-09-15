@@ -37,8 +37,9 @@ export const STUDIO = {
   email: "reddoorstudio25@gmail.com",
   phone: "+20 11 18324473",
   address: "Villa No. 28, Banafsag 10, New Cairo — Settlement 1, Cairo, Egypt",
-  instagram: "https://instagram.com/reddoorstudio",
-  facebook: "https://facebook.com/reddoorstudio",
+  instagram: "https://www.instagram.com/ahmedyounis25",
+  pinterest: "https://www.pinterest.com/reddoorstudio25/",
+  facebook: "https://www.facebook.com/ahmedyounis25",
 };
 
 export const CATEGORIES: Category[] = [

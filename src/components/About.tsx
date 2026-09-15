@@ -59,7 +59,7 @@ export default function About() {
             ].map(({ text, delay }, i) => (
               <p
                 key={i}
-                className="reveal text-[14px] text-[#c4b89a]/70 leading-relaxed"
+                className="about-copy reveal text-[14px] text-[#c4b89a]/70 leading-relaxed"
                 style={{ animationDelay: delay, fontFamily: "var(--font-sans)", fontWeight: 300 }}
               >
                 {text}
@@ -82,7 +82,7 @@ export default function About() {
                   {n}
                 </p>
                 <p
-                  className="text-[10px] tracking-[0.15em] uppercase text-[#7a6e5e]"
+                  className="about-stat-label text-[10px] tracking-[0.15em] uppercase text-[#7a6e5e]"
                   style={{ fontFamily: "var(--font-sans)" }}
                 >
                   {label}

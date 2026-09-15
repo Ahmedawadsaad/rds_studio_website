@@ -18,7 +18,10 @@ export default function ProjectsGrid() {
   useEffect(() => {
     const load = async () => {
       const [projectData, categoryData] = await Promise.all([getProjects(), getCategories()]);
-      const nextCategories = [{ id: "all", name: "All Projects", count: projectData.length }, ...categoryData];
+      const nextCategories = [
+        { id: "all", name: "All Projects", count: projectData.length },
+        ...categoryData.filter((category) => category.id !== "all"),
+      ];
       setProjects(projectData);
       setCategories(nextCategories);
       setDisplayed(activeCategory === "all" ? projectData : projectData.filter((p) => p.category === activeCategory));
@@ -60,15 +63,15 @@ export default function ProjectsGrid() {
     <section id="projects" ref={sectionRef} className="py-32 px-8 max-w-[1400px] mx-auto">
       <div className="mb-16">
         <p className="reveal text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-4" style={{ fontFamily: "var(--font-sans)" }}>
-          Selected Works
+          Our Projects
         </p>
         <h2
           className="reveal text-[clamp(2rem,4vw,3.5rem)] font-light text-[#f0e8d5] leading-[1.1]"
           style={{ fontFamily: "var(--font-display)", animationDelay: "0.1s" }}
         >
-          Every project begins with
+          Explore our projects
           <br />
-          <em style={{ fontStyle: "italic", color: "#c9a46a" }}>a blank floor plan</em>
+          <em style={{ fontStyle: "italic", color: "#c9a46a" }}>from concept to completion</em>
         </h2>
       </div>
 
@@ -132,7 +135,7 @@ function ProjectCard({
   return (
     <div
       ref={ref}
-      className={`relative aspect-[4/3] overflow-hidden bg-[#141210] cursor-none ${visible ? "grid-item-enter" : "opacity-0"}`}
+      className={`relative aspect-[4/3] overflow-hidden bg-[#141210] ${visible ? "grid-item-enter" : "opacity-0"}`}
       style={{ animationDelay: `${index * 0.07}s` }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -164,23 +167,37 @@ function ProjectCard({
           <div className="flex items-end justify-between">
             <div>
               <p
-                className="text-[9px] tracking-[0.4em] uppercase text-[#c9a46a] mb-2"
+                className="project-card-meta text-[9px] tracking-[0.4em] uppercase text-[#c9a46a] mb-2"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 {project.category} · {project.year}
               </p>
               <h3
-                className="text-xl font-light text-[#f0e8d5] leading-tight"
+                className="project-card-title text-xl font-light text-[#f0e8d5] leading-tight"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {project.name}
               </h3>
               <p
-                className="text-[11px] text-[#f0e8d5]/50 mt-1"
+                className="project-card-location text-[11px] text-[#f0e8d5]/75 mt-1"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 {project.location}
               </p>
+              {project.description && (
+                <p
+                  className="project-card-description mt-2 max-w-[28rem] text-[11px] leading-relaxed text-[#f0e8d5]/75"
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {project.description}
+                </p>
+              )}
             </div>
             <div
               className="w-10 h-px bg-[#c9a46a] transition-all duration-500"

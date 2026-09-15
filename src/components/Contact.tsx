@@ -22,7 +22,7 @@ export default function Contact() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(201,164,106,0.05) 0%, transparent 70%)",
+            "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(193, 134, 39, 0.05) 0%, transparent 70%)",
         }}
       />
 
@@ -39,14 +39,14 @@ export default function Contact() {
             >
               Ready to design
               <br />
-              <em style={{ fontStyle: "italic", color: "#c9a46a" }}>your home?</em>
+              <em style={{ fontStyle: "italic", color: "#ba842d" }}>your home?</em>
             </h2>
 
             {/* Magnetic button */}
             <div className="reveal inline-block" style={{ animationDelay: "0.2s" }}>
               <button
                 ref={btnRef}
-                className="magnetic-btn relative group border border-[#c9a46a] text-[#c9a46a] text-[11px] tracking-[0.35em] uppercase px-10 py-5 overflow-hidden"
+                className="contact-cta magnetic-btn relative group border border-[#c9a46a] text-[#c9a46a] text-[11px] tracking-[0.35em] uppercase px-10 py-5 overflow-hidden"
                 style={{
                   fontFamily: "var(--font-sans)",
                   transform: `translate(${btnPos.x}px, ${btnPos.y}px)`,
@@ -72,26 +72,35 @@ export default function Contact() {
             </div>
 
             {/* Social */}
-            <div className="reveal flex items-center gap-6 mt-12" style={{ animationDelay: "0.25s" }}>
-              <a
-                href={STUDIO.instagram}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] hover:text-[#c9a46a] transition-colors"
-                style={{ fontFamily: "var(--font-sans)" }}
-              >
-                Instagram
-              </a>
-              <span className="w-4 h-px bg-[#282318]" />
-              <a
-                href={STUDIO.facebook}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] hover:text-[#c9a46a] transition-colors"
-                style={{ fontFamily: "var(--font-sans)" }}
-              >
-                Facebook
-              </a>
+            <div className="reveal mt-12 max-w-md" style={{ animationDelay: "0.25s" }}>
+              <p className="text-[10px] tracking-[0.35em] uppercase text-[#7a6e5e] mb-3" style={{ fontFamily: "var(--font-sans)" }}>
+                On the Web
+              </p>
+              <div className="border border-[#6b6254] bg-[#171512]">
+                {[
+                  { name: "Facebook", href: STUDIO.facebook, icon: <FacebookIcon /> },
+                  { name: "Pinterest", href: STUDIO.pinterest, icon: <PinterestIcon /> },
+                  { name: "Instagram", href: STUDIO.instagram, icon: <InstagramIcon /> },
+                ].map(({ name, href, icon }, index, links) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`flex items-center gap-4 px-5 py-4 text-[#fffaf0] hover:bg-[#29251e] transition-colors ${index < links.length - 1 ? "border-b border-[#6b6254]" : ""}`}
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center text-[#fffaf0]">{icon}</span>
+                    <span className="flex-1 text-[14px]" style={{ fontFamily: "var(--font-sans)" }}>{name}</span>
+                    <span className="text-xl text-[#fffaf0]" aria-hidden="true">↗</span>
+                  </a>
+                ))}
+              </div>
+              <p className="mt-10 text-[11px] tracking-[0.25em] uppercase text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
+                Ahmed Younis · Architect and Designer
+              </p>
+              <p className="contact-intro mt-4 max-w-sm text-[16px] leading-relaxed text-[#f0e8d5]/70" style={{ fontFamily: "var(--font-sans)", fontWeight: 300 }}>
+                Architect and founder of Red Door Studio, working on interior and exterior designs.
+              </p>
             </div>
           </div>
 
@@ -144,4 +153,16 @@ export default function Contact() {
       </div>
     </section>
   );
+}
+
+function FacebookIcon() {
+  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="fill-[#171512]" d="M13.4 19v-6h2l.3-2.3h-2.3V9.2c0-.7.2-1.2 1.2-1.2h1.2V6h-1.9c-2.1 0-3.2 1.2-3.2 3.2v1.5H9v2.3h1.7v6h2.7Z" /></svg>;
+}
+
+function PinterestIcon() {
+  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="fill-[#171512]" d="M12.8 6.3c-2.7 0-4.3 1.9-4.3 3.8 0 1.1.4 2.1 1.3 2.5.1.1.2 0 .2-.1l.2-.8c.1-.2 0-.3-.1-.5-.3-.4-.5-.8-.5-1.4 0-1.5 1.1-2.7 2.8-2.7 1.5 0 2.4.9 2.4 2.1 0 1.6-.7 3-1.7 3-.6 0-1.1-.5-.9-1.2l.4-1.6c.2-.7-.1-1.3-.8-1.3-.6 0-1.1.6-1.1 1.4 0 .5.2.8.2.8l-.8 3.3c-.2.9-.1 2 0 2.7l.1.1c.1-.1.9-1.1 1.2-2.1l.4-1.6c.2.4.8.8 1.5.8 2 0 3.3-1.8 3.3-4.2 0-1.8-1.5-3.9-4-3.9Z" /></svg>;
+}
+
+function InstagramIcon() {
+  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.3" cy="6.8" r="1" className="fill-current stroke-none" /></svg>;
 }

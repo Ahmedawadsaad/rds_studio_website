@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addCategory, createProject, deleteProject, getCategories, getProjects, loginAdmin, type Category, type Project } from "../lib/api";
+import { addCategory, createProject, deleteProject, getCategories, getProjects, loginAdmin, updateSiteSettings, type Category, type Project } from "../lib/api";
 
-type AdminView = "dashboard" | "projects" | "new-project" | "categories";
+type AdminView = "dashboard" | "projects" | "new-project" | "categories" | "site-settings";
 
 type AdminSession = {
   token: string;
@@ -122,6 +122,7 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
     { id: "dashboard", label: "Dashboard", icon: Icon.grid },
     { id: "projects", label: "Projects", icon: Icon.folder },
     { id: "categories", label: "Categories", icon: Icon.tag },
+    { id: "site-settings", label: "Site Settings", icon: "◉" },
   ];
 
   return (
@@ -252,31 +253,82 @@ function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]
   );
 }
 
-function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]; onBack: () => void; onSave: (payload: Record<string, string | number>) => Promise<void> }) {
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+
+function readImage(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    return Promise.reject(new Error("Please select an image file."));
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    return Promise.reject(new Error("Each image must be smaller than 4 MB."));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read the image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]; onBack: () => void; onSave: (payload: Partial<Project>) => Promise<void> }) {
   const [form, setForm] = useState({
     name: "",
-    category: categories[0]?.id || "villas",
+    category: categories.find((category) => category.id !== "all")?.id || "villas",
     location: "",
     year: new Date().getFullYear(),
     area: "",
     description: "",
   });
+  const [thumbnail, setThumbnail] = useState("");
+  const [heroImage, setHeroImage] = useState("");
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [imageError, setImageError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const update = (key: string, value: string | number) => setForm((current) => ({ ...current, [key]: value }));
 
+  const selectImage = async (file: File | undefined, setter: (value: string) => void) => {
+    if (!file) return;
+    try {
+      setImageError("");
+      setter(await readImage(file));
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Could not read the image.");
+    }
+  };
+
+  const selectGallery = async (files: FileList | null) => {
+    if (!files) return;
+    try {
+      setImageError("");
+      const images = await Promise.all(Array.from(files).map(readImage));
+      setGalleryImages(images);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Could not read the images.");
+    }
+  };
+
   const submit = async () => {
-    if (!form.name.trim()) return;
+    setSaveError("");
+    if (!form.name.trim() || form.category === "all" || !thumbnail || !heroImage) {
+      setSaveError("Choose a specific category, project name, card image, and main image.");
+      return;
+    }
     setSubmitting(true);
     try {
       await onSave({
         ...form,
         status: "published",
-        thumbnail: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-        heroImage: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1800&q=80",
-        rooms: [],
+        thumbnail,
+        heroImage,
+        rooms: galleryImages.length > 0 ? [{ name: "Gallery", images: galleryImages }] : [],
         floorPlans: [],
       });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save the project.");
     } finally {
       setSubmitting(false);
     }
@@ -327,10 +379,33 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
           <textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={5} className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a] resize-none" style={{ fontFamily: "var(--font-sans)" }} />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ImageUpload label="Card Image" value={thumbnail} onChange={(file) => void selectImage(file, setThumbnail)} />
+          <ImageUpload label="Main Image" value={heroImage} onChange={(file) => void selectImage(file, setHeroImage)} />
+        </div>
+
+        <div>
+          <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Gallery Images</label>
+          <input type="file" accept="image/*" multiple onChange={(e) => void selectGallery(e.target.files)} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
+          {galleryImages.length > 0 && <p className="text-[11px] text-[#c9a46a] mt-2" style={{ fontFamily: "var(--font-sans)" }}>{galleryImages.length} image(s) selected</p>}
+        </div>
+
+        {(imageError || saveError) && <p className="text-[11px] text-red-400/80" style={{ fontFamily: "var(--font-sans)" }}>{imageError || saveError}</p>}
+
         <button onClick={submit} disabled={submitting} className="bg-[#c9a46a] text-[#0c0b09] text-[11px] tracking-[0.25em] uppercase px-6 py-3 hover:bg-[#b8904f] disabled:opacity-60" style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}>
           {submitting ? "Saving..." : "Save Project"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function ImageUpload({ label, value, onChange }: { label: string; value: string; onChange: (file: File | undefined) => void }) {
+  return (
+    <div>
+      <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>{label}</label>
+      <input type="file" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
+      {value && <img src={value} alt={`${label} preview`} className="mt-3 h-28 w-full object-cover border border-[#282318]" />}
     </div>
   );
 }
@@ -383,6 +458,59 @@ function CategoriesManager({ categories, onAdded }: { categories: Category[]; on
   );
 }
 
+function SiteSettingsManager() {
+  const [heroImage, setHeroImage] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const selectHeroImage = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setMessage("");
+      setHeroImage(await readImage(file));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not read the image.");
+    }
+  };
+
+  const save = async () => {
+    if (!heroImage) {
+      setMessage("Choose a villa image first.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+    try {
+      await updateSiteSettings({ heroImage });
+      setMessage("Hero image saved. Refresh the public site to see it.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save the hero image.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-auto p-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Site Settings</h1>
+        <p className="text-[12px] text-[#7a6e5e] mt-1" style={{ fontFamily: "var(--font-sans)" }}>Update the image shown on the public homepage.</p>
+      </div>
+
+      <div className="max-w-2xl border border-[#282318] bg-[#141210] p-5">
+        <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-3" style={{ fontFamily: "var(--font-sans)" }}>Homepage Hero Image</label>
+        <input type="file" accept="image/*" onChange={(e) => void selectHeroImage(e.target.files?.[0])} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
+        {heroImage && <img src={heroImage} alt="Homepage hero preview" className="mt-5 aspect-[2/1] w-full object-cover border border-[#282318]" />}
+        {message && <p className="mt-4 text-[11px] text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>{message}</p>}
+        <button onClick={() => void save()} disabled={saving} className="mt-5 bg-[#c9a46a] text-[#0c0b09] text-[11px] tracking-[0.25em] uppercase px-6 py-3 hover:bg-[#b8904f] disabled:opacity-60" style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}>
+          {saving ? "Saving..." : "Save Hero Image"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [session, setSession] = useState<AdminSession | null>(readSession());
   const [projects, setProjects] = useState<Project[]>([]);
@@ -416,8 +544,8 @@ export default function Admin() {
     }
   };
 
-  const handleCreateProject = async (payload: Record<string, string | number>) => {
-    const created = await createProject(payload as Partial<Project>);
+  const handleCreateProject = async (payload: Partial<Project>) => {
+    const created = await createProject(payload);
     setProjects((current) => [created, ...current]);
     setView("projects");
   };
@@ -450,6 +578,7 @@ export default function Admin() {
           )}
           {view === "new-project" && <NewProjectForm categories={categories} onBack={() => setView("projects")} onSave={handleCreateProject} />}
           {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} />}
+          {view === "site-settings" && <SiteSettingsManager />}
         </div>
       </main>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { STUDIO } from "../data";
+import { getSiteSettings } from "../lib/api";
 
 /* Contemporary villa elevation paths — each draws in sequence */
 const VILLA_PATHS: { d: string; delay: number }[] = [
@@ -61,10 +62,15 @@ export default function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [drawing, setDrawing] = useState(false);
+  const [heroImage, setHeroImage] = useState("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format");
 
   useEffect(() => {
     const t = setTimeout(() => setDrawing(true), 400);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    getSiteSettings().then((settings) => setHeroImage(settings.heroImage)).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -98,7 +104,7 @@ export default function Hero() {
           style={{ opacity: photoOpacity }}
         >
           <img
-            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format"
+            src={heroImage}
             alt="Red Door Studio villa"
             className="w-full h-full object-cover"
             style={{ transform: `scale(${photoScale})`, transformOrigin: "center center" }}
@@ -174,24 +180,6 @@ export default function Hero() {
             )}
           </svg>
 
-          {/* Technical label */}
-          {drawing && (
-            <div
-              className="absolute bottom-14 left-8 md:left-12"
-              style={{
-                opacity: 0,
-                animation: "fade-up 0.7s ease 2.1s forwards",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              <p className="text-[9px] tracking-[0.4em] uppercase text-[#c9a46a]/50 mb-0.5">
-                Elevation — South Facade
-              </p>
-              <p className="text-[9px] tracking-[0.3em] uppercase text-[#c9a46a]/30">
-                Red Door Studio · Drawing No. RDS-24-001
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Headline */}

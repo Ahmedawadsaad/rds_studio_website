@@ -8,6 +8,7 @@ import { connectDB } from "./db.js";
 import { Project } from "./models/Project.js";
 import { Category } from "./models/Category.js";
 import { AdminUser } from "./models/AdminUser.js";
+import { SiteSettings } from "./models/SiteSettings.js";
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 
 const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -40,18 +41,44 @@ const requireAuth = (req, res, next) => {
   }
 };
 
+const serializeProject = (project) => {
+  const data = project.toObject ? project.toObject() : project;
+  return { ...data, id: String(data._id), _id: undefined };
+};
+
+const isValidObjectId = (value) => typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
+const defaultHeroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format";
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "RDS API is running" });
 });
 
 app.get("/api/projects", async (req, res) => {
   const projects = await Project.find().sort({ createdAt: -1 });
-  res.json(projects);
+  res.json(projects.map(serializeProject));
+});
+
+app.get("/api/projects/:id", async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ message: "Invalid project id" });
+  }
+
+  const project = await Project.findById(req.params.id);
+  if (!project) {
+    return res.status(404).json({ message: "Project not found" });
+  }
+
+  return res.json(serializeProject(project));
 });
 
 app.get("/api/categories", async (req, res) => {
   const categories = await Category.find().sort({ createdAt: 1 });
   res.json(categories);
+});
+
+app.get("/api/site-settings", async (req, res) => {
+  const settings = await SiteSettings.findOne({ key: "public-site" }).lean();
+  return res.json({ heroImage: settings?.heroImage || defaultHeroImage });
 });
 
 app.post("/api/admin/login", async (req, res) => {
@@ -86,23 +113,34 @@ app.get("/api/admin/me", requireAuth, async (req, res) => {
 });
 
 app.post("/api/admin/projects", requireAuth, async (req, res) => {
-  const payload = req.body;
-  const project = await Project.create({
-    ...payload,
-    status: payload.status || "draft",
-  });
-  return res.status(201).json(project);
+  try {
+    const payload = req.body;
+    const project = await Project.create({
+      ...payload,
+      status: payload.status || "draft",
+    });
+    return res.status(201).json(serializeProject(project));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not create project";
+    return res.status(400).json({ message });
+  }
 });
 
 app.put("/api/admin/projects/:id", requireAuth, async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ message: "Invalid project id" });
+  }
   const project = await Project.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (!project) {
     return res.status(404).json({ message: "Project not found" });
   }
-  return res.json(project);
+  return res.json(serializeProject(project));
 });
 
 app.delete("/api/admin/projects/:id", requireAuth, async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ message: "Invalid project id" });
+  }
   const project = await Project.findByIdAndDelete(req.params.id);
   if (!project) {
     return res.status(404).json({ message: "Project not found" });
@@ -118,6 +156,26 @@ app.post("/api/admin/categories", requireAuth, async (req, res) => {
 
   const category = await Category.create({ id, name, count });
   return res.status(201).json(category);
+});
+
+app.put("/api/admin/site-settings", requireAuth, async (req, res) => {
+  const { heroImage } = req.body || {};
+  if (!heroImage || typeof heroImage !== "string" || !heroImage.startsWith("data:image/")) {
+    return res.status(400).json({ message: "A valid hero image is required" });
+  }
+
+  const settings = await SiteSettings.findOneAndUpdate(
+    { key: "public-site" },
+    { key: "public-site", heroImage },
+    { new: true, upsert: true, runValidators: true },
+  ).lean();
+  return res.json({ heroImage: settings.heroImage });
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  const message = error instanceof Error ? error.message : "Request failed";
+  return res.status(400).json({ message });
 });
 
 const seedDefaultAdmin = async () => {
@@ -139,15 +197,18 @@ const seedDefaultAdmin = async () => {
 };
 
 const startServer = async () => {
+  const connected = await connectDB();
+
+  if (!connected) {
+    console.error("API was not started because MongoDB is unavailable.");
+    process.exitCode = 1;
+    return;
+  }
+
+  await seedDefaultAdmin();
   app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
   });
-
-  const connected = await connectDB();
-
-  if (connected) {
-    await seedDefaultAdmin();
-  }
 };
 
 startServer();
