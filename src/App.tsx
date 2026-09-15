@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LoadingScreen from "./components/LoadingScreen";
-import PublicSite from "./pages/PublicSite";
-import ProjectDetail from "./pages/ProjectDetail";
-import Admin from "./pages/Admin";
+import PublicSite from "./views/PublicSite";
+import ProjectDetail from "./views/ProjectDetail";
+import Admin from "./views/Admin";
 
 export default function App() {
   const [loaded, setLoaded] = useState(false);
