@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { supabaseAdmin, supabaseAuth } from "../../lib/supabaseAdmin";
 
 const defaultHeroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format";
 
@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     if (req.method === "POST" && path.join("/") === "admin/login") {
       const { email, password } = req.body || {};
-      const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email: email?.toLowerCase(), password });
+      const { data, error } = await supabaseAuth.auth.signInWithPassword({ email: email?.toLowerCase(), password });
       if (error || !data.user || !data.session) return res.status(401).json({ message: "Invalid credentials" });
       const { data: profile } = await supabaseAdmin.from("admin_profiles").select("*").eq("id", data.user.id).maybeSingle();
       if (!profile?.active) return res.status(403).json({ message: "Admin access required" });

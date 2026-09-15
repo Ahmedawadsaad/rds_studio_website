@@ -10,3 +10,7 @@ if (!url || !serviceRoleKey) {
 export const supabaseAdmin = createClient(url, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+export const supabaseAuth = createClient(url, serviceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
