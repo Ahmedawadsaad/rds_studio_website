@@ -17,7 +17,6 @@ type AdminSession = {
 
 const STORAGE_KEYS = {
   token: "rds-admin-token",
-  session: "rds-admin-session",
 };
 
 const Icon = {
@@ -30,20 +29,9 @@ const Icon = {
   trash: "✕",
 };
 
-function readSession(): AdminSession | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.session);
-    return raw ? (JSON.parse(raw) as AdminSession) : null;
-  } catch {
-    return null;
-  }
-}
-
 function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
-  const [email, setEmail] = useState("admin@rds.com");
-  const [password, setPassword] = useState("rds2024");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -55,7 +43,6 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
     try {
       const session = await loginAdmin(email, password);
       localStorage.setItem(STORAGE_KEYS.token, session.token);
-      localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session));
       onLogin(session);
     } catch {
       setError("Invalid credentials. Use the seeded admin account.");
@@ -83,6 +70,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
             <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Email</label>
             <input
               type="email"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
@@ -94,6 +82,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
             <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Password</label>
             <input
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
@@ -126,7 +115,7 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
   ];
 
   return (
-    <aside className="w-[220px] bg-[#0e0d0b] border-r border-[#282318] flex flex-col h-full">
+    <aside className="w-full md:w-[220px] shrink-0 bg-[#0e0d0b] border-b md:border-b-0 md:border-r border-[#282318] flex flex-col md:h-full">
       <div className="px-6 py-5 border-b border-[#282318]">
         <div className="flex items-center gap-2">
           <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
@@ -142,12 +131,12 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
         </div>
       </div>
 
-      <nav className="flex-1 py-4">
+      <nav className="flex-1 py-2 md:py-4 grid grid-cols-2 sm:grid-cols-4 md:block">
         {links.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => setView(id)}
-            className={`w-full text-left px-6 py-3 text-[11px] tracking-[0.2em] uppercase transition-colors ${view === id ? "text-[#c9a46a] bg-[#141210]" : "text-[#7a6e5e] hover:text-[#f0e8d5]"}`}
+            className={`w-full text-left px-4 md:px-6 py-3 text-[10px] md:text-[11px] tracking-[0.12em] md:tracking-[0.2em] uppercase transition-colors ${view === id ? "text-[#c9a46a] bg-[#141210]" : "text-[#7a6e5e] hover:text-[#f0e8d5]"}`}
             style={{ fontFamily: "var(--font-sans)" }}
           >
             <span className="mr-3">{icon}</span>
@@ -156,12 +145,12 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
         ))}
       </nav>
 
-      <div className="border-t border-[#282318] py-4">
-        <Link to="/" className="block px-6 py-3 text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
+      <div className="border-t border-[#282318] py-2 md:py-4 grid grid-cols-2 md:block">
+        <Link to="/" className="block px-4 md:px-6 py-3 text-[10px] md:text-[11px] tracking-[0.12em] md:tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
           <span className="mr-3">{Icon.eye}</span>
           Public Site
         </Link>
-        <button onClick={onLogout} className="w-full text-left px-6 py-3 text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
+        <button onClick={onLogout} className="w-full text-left px-4 md:px-6 py-3 text-[10px] md:text-[11px] tracking-[0.12em] md:tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
           <span className="mr-3">{Icon.logout}</span>
           Sign Out
         </button>
@@ -179,7 +168,7 @@ function DashboardHome({ projects, categories }: { projects: Project[]; categori
   ];
 
   return (
-    <div className="flex-1 overflow-auto p-8">
+    <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Dashboard</h1>
       </div>
@@ -214,8 +203,8 @@ function DashboardHome({ projects, categories }: { projects: Project[]; categori
 
 function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]; onDelete: (id: string) => void; onCreate: () => void }) {
   return (
-    <div className="flex-1 overflow-auto p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="flex-1 overflow-auto p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Projects</h1>
           <p className="text-[12px] text-[#7a6e5e] mt-1" style={{ fontFamily: "var(--font-sans)" }}>{projects.length} project(s) in the database</p>
@@ -225,7 +214,8 @@ function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]
         </button>
       </div>
 
-      <div className="border border-[#282318] overflow-hidden">
+      <div className="border border-[#282318] overflow-x-auto">
+        <div className="min-w-[620px]">
         <div className="grid grid-cols-[56px_1fr_1fr_100px_80px] gap-4 px-4 py-3 bg-[#141210] border-b border-[#282318]">
           {['', 'Project', 'Category', 'Year', ''].map((h, i) => (
             <span key={i} className="text-[9px] tracking-[0.35em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>{h}</span>
@@ -248,6 +238,7 @@ function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]
             </button>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );
@@ -335,11 +326,11 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
   };
 
   return (
-    <div className="flex-1 overflow-auto p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="flex-1 overflow-auto p-4 md:p-8">
+      <div className="flex items-start gap-3 mb-8">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>← Back</button>
-          <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Add New Project</h1>
+          <h1 className="text-xl md:text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Add New Project</h1>
         </div>
       </div>
 
@@ -349,7 +340,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
           <input value={form.name} onChange={(e) => update("name", e.target.value)} className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Category</label>
             <select value={form.category} onChange={(e) => update("category", e.target.value)} className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
@@ -427,7 +418,7 @@ function CategoriesManager({ categories, onAdded }: { categories: Category[]; on
   };
 
   return (
-    <div className="flex-1 overflow-auto p-8">
+    <div className="flex-1 overflow-auto p-4 md:p-8">
       <h1 className="text-2xl font-light text-[#f0e8d5] mb-6" style={{ fontFamily: "var(--font-display)" }}>Categories</h1>
 
       <div className="max-w-lg space-y-3 border border-[#282318] bg-[#141210] p-4">
@@ -441,7 +432,7 @@ function CategoriesManager({ categories, onAdded }: { categories: Category[]; on
         ))}
       </div>
 
-      <div className="max-w-lg mt-6 flex gap-3">
+      <div className="max-w-lg mt-6 flex flex-col sm:flex-row gap-3">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -492,7 +483,7 @@ function SiteSettingsManager() {
   };
 
   return (
-    <div className="flex-1 overflow-auto p-8">
+    <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Site Settings</h1>
         <p className="text-[12px] text-[#7a6e5e] mt-1" style={{ fontFamily: "var(--font-sans)" }}>Update the image shown on the public homepage.</p>
@@ -512,10 +503,15 @@ function SiteSettingsManager() {
 }
 
 export default function Admin() {
-  const [session, setSession] = useState<AdminSession | null>(readSession());
+  const [session, setSession] = useState<AdminSession | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [view, setView] = useState<AdminView>("dashboard");
+
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEYS.token);
+    localStorage.removeItem("rds-admin-session");
+  }, []);
 
   const loadData = async () => {
     const [nextProjects, nextCategories] = await Promise.all([getProjects(), getCategories()]);
@@ -530,7 +526,6 @@ export default function Admin() {
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEYS.token);
-    localStorage.removeItem(STORAGE_KEYS.session);
     setSession(null);
     setView("dashboard");
   };
@@ -559,19 +554,19 @@ export default function Admin() {
   }
 
   return (
-    <div className="h-screen flex bg-[#0c0b09] overflow-hidden">
+    <div className="min-h-screen md:h-screen flex flex-col md:flex-row bg-[#0c0b09] overflow-visible md:overflow-hidden">
       <Sidebar view={view} setView={setView} onLogout={signOut} />
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-8 h-[60px] border-b border-[#282318] bg-[#0e0d0b] flex-shrink-0">
+      <main className="min-w-0 flex-1 overflow-visible md:overflow-hidden flex flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-8 py-4 md:py-0 md:h-[60px] border-b border-[#282318] bg-[#0e0d0b] flex-shrink-0">
           <div className="flex items-center gap-1 text-[11px] text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>
             <span>Admin</span>
             <span className="mx-1 text-[#282318]">/</span>
             <span className="text-[#f0e8d5]/50 capitalize">{view}</span>
           </div>
-          <div className="text-[11px] text-[#f0e8d5]/60" style={{ fontFamily: "var(--font-sans)" }}>{session.user.email}</div>
+          <div className="max-w-full truncate text-[11px] text-[#f0e8d5]/60" style={{ fontFamily: "var(--font-sans)" }}>{session.user.email}</div>
         </div>
 
-        <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 min-h-0 overflow-visible md:overflow-hidden flex">
           {view === "dashboard" && <DashboardHome projects={projects} categories={categories} />}
           {view === "projects" && (projects.length > 0 || true) && (
             <ProjectsManager projects={projects} onDelete={handleDeleteProject} onCreate={() => setView("new-project")} />
