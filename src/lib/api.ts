@@ -15,12 +15,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const text = await response.text();
+    if (response.status === 413) {
+      throw new Error("الصور كبيرة جداً. اختر صوراً أقل أو صوراً بحجم أصغر ثم حاول مرة أخرى.");
+    }
     try {
       const body = JSON.parse(text) as { message?: string };
-      throw new Error(body.message || "Request failed");
+      throw new Error(body.message || "تعذر تنفيذ الطلب. راجع البيانات وحاول مرة أخرى.");
     } catch (error) {
       if (error instanceof Error && !(error instanceof SyntaxError)) throw error;
-      throw new Error(text || "Request failed");
+      throw new Error("تعذر تنفيذ الطلب. راجع البيانات وحاول مرة أخرى.");
     }
   }
 
@@ -94,5 +97,13 @@ export async function addCategory(payload: { id: string; name: string; count?: n
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCategory(id: string) {
+  const token = localStorage.getItem("rds-admin-token");
+  return request<{ ok: boolean; message: string }>(`/admin/categories/${id}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 }

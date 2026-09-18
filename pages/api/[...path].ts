@@ -19,13 +19,25 @@ async function requireAdmin(req: NextApiRequest) {
 async function uploadImage(value: unknown, folder: string) {
   if (typeof value !== "string" || !value.startsWith("data:image/")) return value;
   const match = value.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
-  if (!match) throw new Error("Invalid image data");
+  if (!match) throw new Error("تعذر قراءة بيانات إحدى الصور. اختر ملفات صور صالحة وحاول مرة أخرى.");
   const buffer = Buffer.from(match[2], "base64");
   const extension = match[1].split("/")[1].replace("svg+xml", "svg");
   const path = `${folder}/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabaseAdmin.storage.from("project-images").upload(path, buffer, { contentType: match[1], upsert: false });
   if (error) throw error;
   return supabaseAdmin.storage.from("project-images").getPublicUrl(path).data.publicUrl;
+}
+
+function friendlyError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
+    return "الصور كبيرة جداً. اختر صوراً أقل أو صوراً بحجم أصغر ثم حاول مرة أخرى.";
+  }
+  if (message.includes("duplicate") || message.includes("unique")) {
+    return "يوجد مشروع أو تصنيف بنفس البيانات. غيّر الاسم أو المعرّف ثم حاول مرة أخرى.";
+  }
+  if (error instanceof Error && /[\u0600-\u06ff]/.test(error.message)) return error.message;
+  return "تعذر حفظ البيانات. راجع الحقول والصور ثم حاول مرة أخرى.";
 }
 
 async function uploadProjectImages(payload: any) {
@@ -91,6 +103,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw error;
       return res.status(201).json(data);
     }
+    if (req.method === "DELETE" && path[0] === "admin" && path[1] === "categories" && path[2]) {
+      const categoryId = path[2];
+      const { count, error: countError } = await supabaseAdmin
+        .from("projects")
+        .select("id", { count: "exact", head: true })
+        .eq("category", categoryId);
+      if (countError) throw countError;
+      if ((count || 0) > 0) {
+        return res.status(409).json({ message: "لا يمكن حذف هذا التصنيف لأنه مستخدم في مشاريع. غيّر تصنيف المشاريع أولاً." });
+      }
+
+      const { data, error } = await supabaseAdmin.from("categories").delete().eq("id", categoryId).select().maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ message: "Category not found" });
+      return res.json({ ok: true, message: "Category deleted" });
+    }
     if (req.method === "PUT" && path.join("/") === "admin/site-settings") {
       const heroImage = await uploadImage(req.body?.heroImage, "site");
       const { data, error } = await supabaseAdmin.from("site_settings").upsert({ key: "public-site", hero_image: heroImage }).select().single();
@@ -99,8 +127,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     return res.status(404).json({ message: "Not found" });
   } catch (error) {
-    return res.status(400).json({ message: error instanceof Error ? error.message : "Request failed" });
+    return res.status(400).json({ message: friendlyError(error) });
   }
 }
 
-export const config = { api: { bodyParser: { sizeLimit: "20mb" } } };
+export const config = { api: { bodyParser: { sizeLimit: "50mb" } } };

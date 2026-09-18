@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addCategory, createProject, deleteProject, getCategories, getProjects, loginAdmin, updateSiteSettings, type Category, type Project } from "../lib/api";
+import { addCategory, createProject, deleteCategory, deleteProject, getCategories, getProjects, loginAdmin, updateSiteSettings, type Category, type Project } from "../lib/api";
 
 type AdminView = "dashboard" | "projects" | "new-project" | "categories" | "site-settings";
 
@@ -258,7 +258,7 @@ function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read the image."));
+    reader.onerror = () => reject(new Error("تعذر قراءة الصورة. اختر ملف صورة صالحاً وحاول مرة أخرى."));
     reader.readAsDataURL(file);
   });
 }
@@ -274,7 +274,9 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
   });
   const [thumbnail, setThumbnail] = useState("");
   const [heroImage, setHeroImage] = useState("");
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [roomSections, setRoomSections] = useState<{ name: string; images: string[] }[]>([
+    { name: "Living Room", images: [] },
+  ]);
   const [imageError, setImageError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -287,25 +289,31 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
       setImageError("");
       setter(await readImage(file));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : "Could not read the image.");
+      setImageError(error instanceof Error ? error.message : "تعذر قراءة الصورة. اختر ملف صورة صالحاً وحاول مرة أخرى.");
     }
   };
 
-  const selectGallery = async (files: FileList | null) => {
+  const selectRoomImages = async (index: number, files: FileList | null) => {
     if (!files) return;
     try {
       setImageError("");
       const images = await Promise.all(Array.from(files).map(readImage));
-      setGalleryImages(images);
+      setRoomSections((current) => current.map((section, sectionIndex) => sectionIndex === index ? { ...section, images } : section));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : "Could not read the images.");
+      setImageError(error instanceof Error ? error.message : "تعذر قراءة الصور. اختر ملفات صور صالحة وحاول مرة أخرى.");
     }
+  };
+
+  const addRoomSection = () => setRoomSections((current) => [...current, { name: "", images: [] }]);
+
+  const updateRoomName = (index: number, name: string) => {
+    setRoomSections((current) => current.map((section, sectionIndex) => sectionIndex === index ? { ...section, name } : section));
   };
 
   const submit = async () => {
     setSaveError("");
     if (!form.name.trim() || form.category === "all" || !thumbnail || !heroImage) {
-      setSaveError("Choose a specific category, project name, card image, and main image.");
+      setSaveError("أكمل اسم المشروع والتصنيف وصورة الكارد والصورة الرئيسية قبل الحفظ.");
       return;
     }
     setSubmitting(true);
@@ -315,11 +323,11 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
         status: "published",
         thumbnail,
         heroImage,
-        rooms: galleryImages.length > 0 ? [{ name: "Gallery", images: galleryImages }] : [],
+        rooms: roomSections.filter((section) => section.name.trim() && section.images.length > 0),
         floorPlans: [],
       });
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save the project.");
+      setSaveError(error instanceof Error ? error.message : "تعذر حفظ المشروع. راجع الصور والبيانات وحاول مرة أخرى.");
     } finally {
       setSubmitting(false);
     }
@@ -375,10 +383,24 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
           <ImageUpload label="Main Image" value={heroImage} onChange={(file) => void selectImage(file, setHeroImage)} />
         </div>
 
-        <div>
-          <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Gallery Images</label>
-          <input type="file" accept="image/*" multiple onChange={(e) => void selectGallery(e.target.files)} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
-          {galleryImages.length > 0 && <p className="text-[11px] text-[#c9a46a] mt-2" style={{ fontFamily: "var(--font-sans)" }}>{galleryImages.length} image(s) selected</p>}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>Villa Sections</label>
+            <button type="button" onClick={addRoomSection} className="border border-[#c9a46a]/50 px-3 py-2 text-[10px] tracking-[0.2em] uppercase text-[#c9a46a] hover:bg-[#c9a46a] hover:text-[#0c0b09]" style={{ fontFamily: "var(--font-sans)" }}>+ Add Section</button>
+          </div>
+          {roomSections.map((section, index) => (
+            <div key={index} className="border border-[#282318] bg-[#141210] p-4">
+              <input
+                value={section.name}
+                onChange={(e) => updateRoomName(index, e.target.value)}
+                placeholder="Example: Bathroom or Swimming Pool"
+                className="mb-3 w-full bg-[#0c0b09] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
+                style={{ fontFamily: "var(--font-sans)" }}
+              />
+              <input type="file" accept="image/*" multiple onChange={(e) => void selectRoomImages(index, e.target.files)} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
+              {section.images.length > 0 && <p className="mt-2 text-[11px] text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>{section.images.length} image(s) selected</p>}
+            </div>
+          ))}
         </div>
 
         {(imageError || saveError) && <p className="text-[11px] text-red-400/80" style={{ fontFamily: "var(--font-sans)" }}>{imageError || saveError}</p>}
@@ -401,19 +423,38 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
   );
 }
 
-function CategoriesManager({ categories, onAdded }: { categories: Category[]; onAdded: (category: Category) => void }) {
+function CategoriesManager({ categories, onAdded, onDeleted }: { categories: Category[]; onAdded: (category: Category) => void; onDeleted: (id: string) => void }) {
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const addCategoryClick = async () => {
     if (!newName.trim()) return;
     setLoading(true);
+    setError("");
     try {
       const category = await addCategory({ id: newName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), name: newName.trim() });
       onAdded(category);
       setNewName("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not add the category.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteCategoryClick = async (category: Category) => {
+    if (!window.confirm(`Delete the category "${category.name}"?`)) return;
+    setDeleting(category.id);
+    setError("");
+    try {
+      await deleteCategory(category.id);
+      onDeleted(category.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not delete the category.");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -428,9 +469,20 @@ function CategoriesManager({ categories, onAdded }: { categories: Category[]; on
               <p className="text-[13px] text-[#f0e8d5]" style={{ fontFamily: "var(--font-sans)" }}>{category.name}</p>
               <p className="text-[11px] text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>{category.count ?? 0} projects</p>
             </div>
+            <button
+              type="button"
+              onClick={() => void deleteCategoryClick(category)}
+              disabled={deleting === category.id}
+              className="text-[11px] tracking-[0.15em] uppercase text-[#7a6e5e] hover:text-red-400 disabled:opacity-50"
+              style={{ fontFamily: "var(--font-sans)" }}
+            >
+              {deleting === category.id ? "Deleting..." : "Delete"}
+            </button>
           </div>
         ))}
       </div>
+
+      {error && <p className="max-w-lg mt-4 text-[11px] text-red-400/80" style={{ fontFamily: "var(--font-sans)" }}>{error}</p>}
 
       <div className="max-w-lg mt-6 flex flex-col sm:flex-row gap-3">
         <input
@@ -572,7 +624,7 @@ export default function Admin() {
             <ProjectsManager projects={projects} onDelete={handleDeleteProject} onCreate={() => setView("new-project")} />
           )}
           {view === "new-project" && <NewProjectForm categories={categories} onBack={() => setView("projects")} onSave={handleCreateProject} />}
-          {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} />}
+          {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} onDeleted={(id) => setCategories((current) => current.filter((category) => category.id !== id))} />}
           {view === "site-settings" && <SiteSettingsManager />}
         </div>
       </main>

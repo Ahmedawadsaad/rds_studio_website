@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { STUDIO } from "../data";
 import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
@@ -70,7 +71,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           {!isAdmin && (
             <button
-              onClick={() => scrollTo("contact")}
+              onClick={() => window.open(`https://wa.me/${STUDIO.whatsapp}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
               className="nav-consultation hidden md:block text-[11px] tracking-[0.25em] uppercase border border-[#c9a46a]/40 text-[#c9a46a] px-5 py-2 hover:bg-[#c9a46a] hover:text-[#0c0b09] transition-all duration-300"
               style={{ fontFamily: "var(--font-sans)" }}
             >

@@ -53,7 +53,7 @@ export default function Contact() {
                 }}
                 onMouseMove={onMouseMove}
                 onMouseLeave={onMouseLeave}
-                onClick={() => window.open(`mailto:${STUDIO.email}?subject=Consultation Request`, "_blank")}
+                onClick={() => window.open(`https://wa.me/${STUDIO.whatsapp}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
               >
                 <span className="relative z-10 transition-colors duration-300 group-hover:text-[#0c0b09]">
                   Book a Consultation
@@ -79,8 +79,8 @@ export default function Contact() {
               <div className="border border-[#6b6254] bg-[#171512]">
                 {[
                   { name: "Facebook", href: STUDIO.facebook, icon: <FacebookIcon /> },
-                  { name: "Pinterest", href: STUDIO.pinterest, icon: <PinterestIcon /> },
                   { name: "Instagram", href: STUDIO.instagram, icon: <InstagramIcon /> },
+                  { name: "Behance", href: STUDIO.behance, icon: <BehanceIcon /> },
                 ].map(({ name, href, icon }, index, links) => (
                   <a
                     key={name}
@@ -159,8 +159,8 @@ function FacebookIcon() {
   return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="fill-[#171512]" d="M13.4 19v-6h2l.3-2.3h-2.3V9.2c0-.7.2-1.2 1.2-1.2h1.2V6h-1.9c-2.1 0-3.2 1.2-3.2 3.2v1.5H9v2.3h1.7v6h2.7Z" /></svg>;
 }
 
-function PinterestIcon() {
-  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="fill-[#171512]" d="M12.8 6.3c-2.7 0-4.3 1.9-4.3 3.8 0 1.1.4 2.1 1.3 2.5.1.1.2 0 .2-.1l.2-.8c.1-.2 0-.3-.1-.5-.3-.4-.5-.8-.5-1.4 0-1.5 1.1-2.7 2.8-2.7 1.5 0 2.4.9 2.4 2.1 0 1.6-.7 3-1.7 3-.6 0-1.1-.5-.9-1.2l.4-1.6c.2-.7-.1-1.3-.8-1.3-.6 0-1.1.6-1.1 1.4 0 .5.2.8.2.8l-.8 3.3c-.2.9-.1 2 0 2.7l.1.1c.1-.1.9-1.1 1.2-2.1l.4-1.6c.2.4.8.8 1.5.8 2 0 3.3-1.8 3.3-4.2 0-1.8-1.5-3.9-4-3.9Z" /></svg>;
+function BehanceIcon() {
+  return <span className="text-[15px] font-bold leading-none" aria-hidden="true">Bē</span>;
 }
 
 function InstagramIcon() {

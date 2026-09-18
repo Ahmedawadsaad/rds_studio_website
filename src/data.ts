@@ -36,10 +36,11 @@ export const STUDIO = {
   tagline: "We Design Homes From The Ground Up",
   email: "reddoorstudio25@gmail.com",
   phone: "+20 11 18324473",
+  whatsapp: "201118324473",
   address: "Villa No. 28, Banafsag 10, New Cairo — Settlement 1, Cairo, Egypt",
-  instagram: "https://www.instagram.com/ahmedyounis25",
-  pinterest: "https://www.pinterest.com/reddoorstudio25/",
-  facebook: "https://www.facebook.com/ahmedyounis25",
+  instagram: "https://www.instagram.com/reddoorstudio25/?hl=ar",
+  behance: "https://www.behance.net/ahmedyouni25",
+  facebook: "https://www.facebook.com/Reddoorstudio25",
 };
 
 export const CATEGORIES: Category[] = [

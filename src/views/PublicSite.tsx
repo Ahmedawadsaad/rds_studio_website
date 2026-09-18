@@ -58,13 +58,13 @@ function Footer() {
             Facebook
           </a>
           <a
-            href={STUDIO.pinterest}
+            href={STUDIO.behance}
             target="_blank"
             rel="noreferrer"
             className="footer-link text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] hover:text-[#c9a46a] transition-colors"
             style={{ fontFamily: "var(--font-sans)" }}
           >
-            Pinterest
+            Behance
           </a>
         </div>
       </div>
