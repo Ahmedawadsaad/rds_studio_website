@@ -28,18 +28,6 @@ async function uploadImage(value: unknown, folder: string) {
   return supabaseAdmin.storage.from("project-images").getPublicUrl(path).data.publicUrl;
 }
 
-function friendlyError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
-    return "The image is too large. Please choose a smaller image and try again.";
-  }
-  if (message.includes("duplicate") || message.includes("unique")) {
-    return "This item already exists. Please use a different name and try again.";
-  }
-  if (error instanceof Error && /[\u0600-\u06ff]/.test(error.message)) return error.message;
-  return "Something went wrong. Please check your details and try again.";
-}
-
 async function uploadProjectImages(payload: any) {
   const result = { ...payload };
   result.thumbnail = await uploadImage(result.thumbnail, "projects");
@@ -77,12 +65,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.json(projectOut(data));
     }
     if (req.method === "GET" && path[0] === "categories") {
-      const { data, error } = await supabaseAdmin.from("categories").select("*").order("created_at", { ascending: true });
-      if (error) throw error;
-      return res.json(data || []);
+      const [{ data: categories, error: categoriesError }, { data: projects, error: projectsError }] = await Promise.all([
+        supabaseAdmin.from("categories").select("*").order("created_at", { ascending: true }),
+        supabaseAdmin.from("projects").select("category"),
+      ]);
+      if (categoriesError || projectsError) throw categoriesError || projectsError;
+      const counts = new Map<string, number>();
+      for (const project of projects || []) counts.set(project.category, (counts.get(project.category) || 0) + 1);
+      return res.json((categories || []).map((category) => ({ ...category, count: counts.get(category.id) || 0 })));
     }
     if (req.method === "GET" && path[0] === "site-settings") {
-      const { data } = await supabaseAdmin.from("site_settings").select("hero_image").eq("key", "public-site").maybeSingle();
+      const { data, error } = await supabaseAdmin.from("site_settings").select("hero_image").eq("key", "public-site").maybeSingle();
+      if (error) throw error;
       return res.json({ heroImage: data?.hero_image || defaultHeroImage });
     }
     if (req.method === "POST" && path.join("/") === "admin/login") {
@@ -93,8 +87,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!profile?.active) return res.status(403).json({ message: "Admin access required" });
       return res.json({ token: data.session.access_token, user: { id: data.user.id, name: profile.name, email: data.user.email, role: profile.role, companyName: profile.company_name } });
     }
+    if (path[0] !== "admin") return res.status(404).json({ message: "Not found" });
+    const adminPath = path.join("/");
+    const isKnownAdminRoute =
+      (req.method === "GET" && adminPath === "admin/me") ||
+      (req.method === "POST" && (adminPath === "admin/uploads" || adminPath === "admin/projects" || adminPath === "admin/categories")) ||
+      (req.method === "PUT" && (adminPath === "admin/site-settings" || (path.length === 3 && path[1] === "projects" && Boolean(path[2])))) ||
+      (req.method === "DELETE" && (path.length === 3 && (path[1] === "projects" || path[1] === "categories") && Boolean(path[2])));
+    if (!isKnownAdminRoute) return res.status(404).json({ message: "Not found" });
     const admin = await requireAdmin(req);
     if (!admin) return res.status(401).json({ message: "Unauthorized" });
+    if (req.method === "GET" && path.join("/") === "admin/me") {
+      return res.json({ user: { id: admin.auth.id, name: admin.profile.name, email: admin.auth.email, role: admin.profile.role, companyName: admin.profile.company_name } });
+    }
     if (req.method === "POST" && path.join("/") === "admin/uploads") {
       const folder = req.body?.folder === "site" ? "site" : req.body?.folder === "rooms" ? "rooms" : "projects";
       const url = await uploadImage(req.body?.image, folder);
@@ -108,6 +113,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data, error } = await supabaseAdmin.from("projects").insert(row).select().single();
       if (error) throw error;
       return res.status(201).json(projectOut(data));
+    }
+    if (req.method === "PUT" && path[0] === "admin" && path[1] === "projects" && path[2]) {
+      const value = await uploadProjectImages(req.body);
+      const row = { ...value, hero_image: value.heroImage, floor_plans: value.floorPlans || [] };
+      delete row.id; delete row.heroImage; delete row.floorPlans; delete row.createdAt; delete row.updatedAt; delete row.created_at; delete row.updated_at;
+      const { data, error } = await supabaseAdmin.from("projects").update(row).eq("id", path[2]).select().maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ message: "Project not found" });
+      return res.json(projectOut(data));
     }
     if (req.method === "DELETE" && path[0] === "admin" && path[1] === "projects") {
       const { data, error } = await supabaseAdmin.from("projects").delete().eq("id", path[2]).select().maybeSingle();
@@ -144,7 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     return res.status(404).json({ message: "Not found" });
   } catch (error) {
-    return res.status(400).json({ message: publicError(error) });
+    return res.status(500).json({ message: publicError(error) });
   }
 }
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addCategory, createProject, deleteCategory, deleteProject, getCategories, getProjects, loginAdmin, updateSiteSettings, type Category, type Project } from "../lib/api";
+import { addCategory, createProject, deleteCategory, deleteProject, getAdminSession, getCategories, getProjects, loginAdmin, updateProject, updateSiteSettings, type Category, type Project } from "../lib/api";
 
-type AdminView = "dashboard" | "projects" | "new-project" | "categories" | "site-settings";
+type AdminView = "dashboard" | "projects" | "new-project" | "edit-project" | "categories" | "site-settings";
 
 type AdminSession = {
   token: string;
@@ -43,6 +43,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
     try {
       const session = await loginAdmin(email, password);
       localStorage.setItem(STORAGE_KEYS.token, session.token);
+      localStorage.setItem("rds-admin-session", JSON.stringify(session));
       onLogin(session);
     } catch {
       setError("Invalid credentials. Use the seeded admin account.");
@@ -201,7 +202,7 @@ function DashboardHome({ projects, categories }: { projects: Project[]; categori
   );
 }
 
-function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]; onDelete: (id: string) => void; onCreate: () => void }) {
+function ProjectsManager({ projects, onDelete, onCreate, onEdit }: { projects: Project[]; onDelete: (id: string) => void; onCreate: () => void; onEdit: (project: Project) => void }) {
   return (
     <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -216,14 +217,14 @@ function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]
 
       <div className="border border-[#282318] overflow-x-auto">
         <div className="min-w-[620px]">
-        <div className="grid grid-cols-[56px_1fr_1fr_100px_80px] gap-4 px-4 py-3 bg-[#141210] border-b border-[#282318]">
+        <div className="grid grid-cols-[56px_1fr_1fr_100px_120px] gap-4 px-4 py-3 bg-[#141210] border-b border-[#282318]">
           {['', 'Project', 'Category', 'Year', ''].map((h, i) => (
             <span key={i} className="text-[9px] tracking-[0.35em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>{h}</span>
           ))}
         </div>
 
         {projects.map((project, index) => (
-          <div key={project.id} className={`grid grid-cols-[56px_1fr_1fr_100px_80px] gap-4 items-center px-4 py-3 ${index < projects.length - 1 ? 'border-b border-[#282318]' : ''}`}>
+          <div key={project.id} className={`grid grid-cols-[56px_1fr_1fr_100px_120px] gap-4 items-center px-4 py-3 ${index < projects.length - 1 ? 'border-b border-[#282318]' : ''}`}>
             <div className="w-12 h-12 overflow-hidden bg-[#1c1a16]">
               <img src={project.thumbnail} alt={project.name} className="w-full h-full object-cover" />
             </div>
@@ -233,9 +234,10 @@ function ProjectsManager({ projects, onDelete, onCreate }: { projects: Project[]
             </div>
             <p className="text-[12px] text-[#7a6e5e] capitalize" style={{ fontFamily: "var(--font-sans)" }}>{project.category}</p>
             <p className="text-[12px] text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>{project.year}</p>
-            <button onClick={() => onDelete(project.id)} className="text-[#7a6e5e] hover:text-red-400 text-sm" aria-label={`Delete ${project.name}`}>
-              {Icon.trash}
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => onEdit(project)} className="text-[10px] tracking-[0.12em] uppercase text-[#c9a46a] hover:text-[#f0e8d5]" aria-label={`Edit ${project.name}`}>Edit</button>
+              <button onClick={() => onDelete(project.id)} className="text-[#7a6e5e] hover:text-red-400 text-sm" aria-label={`Delete ${project.name}`}>{Icon.trash}</button>
+            </div>
           </div>
         ))}
         </div>
@@ -300,20 +302,18 @@ async function optimizeImage(file: File): Promise<string> {
   throw new Error("The image is still too large after compression. Please use a smaller image.");
 }
 
-function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]; onBack: () => void; onSave: (payload: Partial<Project>) => Promise<void> }) {
+function NewProjectForm({ categories, onBack, onSave, initialProject }: { categories: Category[]; onBack: () => void; onSave: (payload: Partial<Project>) => Promise<void>; initialProject?: Project }) {
   const [form, setForm] = useState({
-    name: "",
-    category: categories.find((category) => category.id !== "all")?.id || "villas",
-    location: "",
-    year: new Date().getFullYear(),
-    area: "",
-    description: "",
+    name: initialProject?.name || "",
+    category: initialProject?.category || categories.find((category) => category.id !== "all")?.id || "villas",
+    location: initialProject?.location || "",
+    year: initialProject?.year || new Date().getFullYear(),
+    area: initialProject?.area || "",
+    description: initialProject?.description || "",
   });
-  const [thumbnail, setThumbnail] = useState("");
-  const [heroImage, setHeroImage] = useState("");
-  const [roomSections, setRoomSections] = useState<{ name: string; images: string[] }[]>([
-    { name: "Living Room", images: [] },
-  ]);
+  const [thumbnail, setThumbnail] = useState(initialProject?.thumbnail || "");
+  const [heroImage, setHeroImage] = useState(initialProject?.heroImage || "");
+  const [roomSections, setRoomSections] = useState<{ name: string; images: string[] }[]>(initialProject?.rooms || [{ name: "Living Room", images: [] }]);
   const [imageError, setImageError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -353,10 +353,6 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
       setSaveError("Enter the project name, project type, card image, and main image before saving.");
       return;
     }
-    if (!form.name.trim() || form.category === "all" || !thumbnail || !heroImage) {
-      setSaveError("Enter the project name, project type, card image, and main image before saving.");
-      return;
-    }
     setSubmitting(true);
     try {
       await onSave({
@@ -379,7 +375,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
       <div className="flex items-start gap-3 mb-8">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>← Back</button>
-          <h1 className="text-xl md:text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Add New Project</h1>
+          <h1 className="text-xl md:text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>{initialProject ? "Edit Project" : "Add New Project"}</h1>
         </div>
       </div>
 
@@ -447,7 +443,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
         {(imageError || saveError) && <p className="text-[11px] text-red-400/80" style={{ fontFamily: "var(--font-sans)" }}>{imageError || saveError}</p>}
 
         <button onClick={submit} disabled={submitting} className="bg-[#c9a46a] text-[#0c0b09] text-[11px] tracking-[0.25em] uppercase px-6 py-3 hover:bg-[#b8904f] disabled:opacity-60" style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}>
-          {submitting ? "Saving..." : "Save Project"}
+          {submitting ? "Saving..." : initialProject ? "Save Changes" : "Save Project"}
         </button>
       </div>
     </div>
@@ -601,10 +597,17 @@ export default function Admin() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [view, setView] = useState<AdminView>("dashboard");
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    localStorage.removeItem(STORAGE_KEYS.token);
-    localStorage.removeItem("rds-admin-session");
+    const token = localStorage.getItem(STORAGE_KEYS.token);
+    if (!token) return;
+    void getAdminSession()
+      .then(({ user }) => setSession({ token, user }))
+      .catch(() => {
+        localStorage.removeItem(STORAGE_KEYS.token);
+        localStorage.removeItem("rds-admin-session");
+      });
   }, []);
 
   const loadData = async () => {
@@ -620,6 +623,7 @@ export default function Admin() {
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEYS.token);
+    localStorage.removeItem("rds-admin-session");
     setSession(null);
     setView("dashboard");
   };
@@ -636,6 +640,14 @@ export default function Admin() {
   const handleCreateProject = async (payload: Partial<Project>) => {
     const created = await createProject(payload);
     setProjects((current) => [created, ...current]);
+    setView("projects");
+  };
+
+  const handleUpdateProject = async (payload: Partial<Project>) => {
+    if (!editingProject) return;
+    const updated = await updateProject(editingProject.id, payload);
+    setProjects((current) => current.map((project) => project.id === updated.id ? updated : project));
+    setEditingProject(null);
     setView("projects");
   };
 
@@ -663,9 +675,10 @@ export default function Admin() {
         <div className="flex-1 min-h-0 overflow-visible md:overflow-hidden flex">
           {view === "dashboard" && <DashboardHome projects={projects} categories={categories} />}
           {view === "projects" && (projects.length > 0 || true) && (
-            <ProjectsManager projects={projects} onDelete={handleDeleteProject} onCreate={() => setView("new-project")} />
+            <ProjectsManager projects={projects} onDelete={handleDeleteProject} onCreate={() => setView("new-project")} onEdit={(project) => { setEditingProject(project); setView("edit-project"); }} />
           )}
           {view === "new-project" && <NewProjectForm categories={categories} onBack={() => setView("projects")} onSave={handleCreateProject} />}
+          {view === "edit-project" && editingProject && <NewProjectForm categories={categories} initialProject={editingProject} onBack={() => { setEditingProject(null); setView("projects"); }} onSave={handleUpdateProject} />}
           {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} onDeleted={(id) => setCategories((current) => current.filter((category) => category.id !== id))} />}
           {view === "site-settings" && <SiteSettingsManager />}
         </div>

@@ -120,12 +120,12 @@ export default function ProjectDetail() {
       <div className="max-w-[1200px] mx-auto px-8 py-6" ref={revealRef}>
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10">
           <p
-            className="reveal text-[1.05rem] text-[#c4b89a]/70 leading-[1.8] font-light"
+            className="text-[1.05rem] text-[#c4b89a]/70 leading-[1.8] font-light"
             style={{ fontFamily: "var(--font-sans)" }}
           >
-            {project.description}
+            {project.description || "Project details will be available soon."}
           </p>
-          <div className="reveal flex flex-col gap-4" style={{ animationDelay: "0.1s" }}>
+          <div className="flex flex-col gap-4">
             {[
               ["Project", project.name],
               ["Location", project.location],
@@ -145,7 +145,7 @@ export default function ProjectDetail() {
                   className="text-[12px] text-[#f0e8d5]/60"
                   style={{ fontFamily: "var(--font-sans)", fontWeight: 300 }}
                 >
-                  {v}
+                  {v || "Not provided"}
                 </span>
               </div>
             ))}

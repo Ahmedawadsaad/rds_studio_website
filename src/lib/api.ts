@@ -39,7 +39,13 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getProject(id: string): Promise<Project> {
-  return request<Project>(`/projects/${id}`);
+  try {
+    return await request<Project>(`/projects/${id}`);
+  } catch {
+    const fallback = fallbackProjects.find((project) => project.id === id);
+    if (fallback) return fallback;
+    throw new Error("Project not found.");
+  }
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -74,7 +80,14 @@ export async function loginAdmin(email: string, password: string) {
   );
 }
 
-export async function createProject(payload: Partial<Project>) {
+export async function getAdminSession() {
+  const token = localStorage.getItem("rds-admin-token");
+  return request<{ user: { id: string; name: string; email: string; role: string; companyName: string } }>("/admin/me", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
+
+async function prepareProjectPayload(payload: Partial<Project>) {
   const upload = async (image: string, folder: "projects" | "rooms" = "projects") => {
     if (!image.startsWith("data:image/")) return image;
     const token = localStorage.getItem("rds-admin-token");
@@ -95,9 +108,24 @@ export async function createProject(payload: Partial<Project>) {
     heroImage: payload.heroImage ? await upload(payload.heroImage) : payload.heroImage,
     rooms,
   };
+  return preparedPayload;
+}
+
+export async function createProject(payload: Partial<Project>) {
+  const preparedPayload = await prepareProjectPayload(payload);
   const token = localStorage.getItem("rds-admin-token");
   return request<Project>("/admin/projects", {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify(preparedPayload),
+  });
+}
+
+export async function updateProject(id: string, payload: Partial<Project>) {
+  const preparedPayload = await prepareProjectPayload(payload);
+  const token = localStorage.getItem("rds-admin-token");
+  return request<Project>(`/admin/projects/${id}`, {
+    method: "PUT",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: JSON.stringify(preparedPayload),
   });

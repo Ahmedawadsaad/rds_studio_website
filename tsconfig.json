@@ -37,6 +37,8 @@
   },
   "include": [
     "src",
+    "pages",
+    "lib",
     ".next/types/**/*.ts"
   ],
   "exclude": [
