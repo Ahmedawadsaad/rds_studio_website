@@ -12,6 +12,7 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(!localProject);
   const [floorTab, setFloorTab] = useState(0);
   const [roomFilter, setRoomFilter] = useState<RoomFilter>("all");
+  const [contentView, setContentView] = useState<ContentView>("overview");
   const [entered, setEntered] = useState(false);
   const revealRef = useReveal();
 
@@ -86,15 +87,15 @@ export default function ProjectDetail() {
         </span>
       </div>
 
-      <div className="relative h-[50vh] min-h-[360px] overflow-hidden bg-[#141210] pt-[68px]">
+      <div className="relative h-[190px] sm:h-[240px] overflow-hidden bg-[#141210]">
         <img
           src={project.heroImage}
           alt={project.name}
           className="w-full h-full object-cover"
           style={{ transform: "scale(1.04)", transformOrigin: "center" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09] via-transparent to-[#0c0b09]/30" />
-        <div className="absolute bottom-8 left-8 md:left-16">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09]/85 via-transparent to-[#0c0b09]/30" />
+        <div className="absolute bottom-4 left-5 md:bottom-6 md:left-16">
           <p
             className="detail-hero-meta text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-3"
             style={{ fontFamily: "var(--font-sans)" }}
@@ -152,7 +153,28 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {project.floorPlans.length > 0 && (
+      <div className="max-w-[1200px] mx-auto px-8 pb-10">
+        <div className="flex flex-wrap gap-2 border-b border-[#282318] pb-5">
+          <ContentTab active={contentView === "overview"} onClick={() => setContentView("overview")}>Full Project</ContentTab>
+          {project.rooms.length > 0 && <ContentTab active={contentView === "spaces"} onClick={() => setContentView("spaces")}>Browse by Space</ContentTab>}
+          {project.floorPlans.length > 0 && <ContentTab active={contentView === "plans"} onClick={() => setContentView("plans")}>Floor Plans</ContentTab>}
+        </div>
+      </div>
+
+      {contentView === "overview" && (
+        <div className="max-w-[1200px] mx-auto px-8 pb-20">
+          <p className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-6" style={{ fontFamily: "var(--font-sans)" }}>Full Project View</p>
+          <div className="relative aspect-[16/9] overflow-hidden border border-[#282318] bg-[#141210]">
+            <img src={project.heroImage} alt={`${project.name} full project`} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09]/75 via-transparent" />
+            <p className="absolute bottom-5 left-5 text-[11px] tracking-[0.25em] uppercase text-[#f0e8d5]" style={{ fontFamily: "var(--font-sans)" }}>
+              {project.rooms.length} spaces · {project.floorPlans.length} floor plan{project.floorPlans.length === 1 ? "" : "s"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {contentView === "plans" && project.floorPlans.length > 0 && (
         <div className="max-w-[1200px] mx-auto px-8 pb-24">
           <p
             className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-8"
@@ -197,7 +219,7 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      <div className="max-w-[1200px] mx-auto px-8 pb-20">
+      {contentView === "spaces" && <div className="max-w-[1200px] mx-auto px-8 pb-20">
         <p
           className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-6"
           style={{ fontFamily: "var(--font-sans)" }}
@@ -232,12 +254,26 @@ export default function ProjectDetail() {
           .map((room, ri) => (
             <RoomSection key={room.name} room={room} index={ri} />
           ))}
-      </div>
+      </div>}
     </div>
   );
 }
 
 type RoomFilter = "all" | "rooms" | "bathrooms" | "pools";
+type ContentView = "overview" | "spaces" | "plans";
+
+function ContentTab({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-4 py-2 text-[10px] tracking-[0.22em] uppercase transition-colors ${active ? "bg-[#c9a46a] text-[#0c0b09]" : "border border-[#282318] text-[#7a6e5e] hover:border-[#c9a46a] hover:text-[#c9a46a]"}`}
+      style={{ fontFamily: "var(--font-sans)" }}
+    >
+      {children}
+    </button>
+  );
+}
 
 const ROOM_FILTERS: RoomFilter[] = ["all", "rooms", "bathrooms", "pools"];
 
@@ -349,4 +385,3 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
     </div>
   );
 }
-

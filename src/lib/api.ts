@@ -16,14 +16,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const text = await response.text();
     if (response.status === 413) {
-      throw new Error("الصور كبيرة جداً. اختر صوراً أقل أو صوراً بحجم أصغر ثم حاول مرة أخرى.");
+      throw new Error("The image is too large to upload. Please choose a smaller image and try again.");
     }
     try {
       const body = JSON.parse(text) as { message?: string };
-      throw new Error(body.message || "تعذر تنفيذ الطلب. راجع البيانات وحاول مرة أخرى.");
+      throw new Error(body.message || "The request could not be completed. Please try again.");
     } catch (error) {
       if (error instanceof Error && !(error instanceof SyntaxError)) throw error;
-      throw new Error("تعذر تنفيذ الطلب. راجع البيانات وحاول مرة أخرى.");
+      throw new Error("The request could not be completed. Please try again.");
     }
   }
 
@@ -75,11 +75,31 @@ export async function loginAdmin(email: string, password: string) {
 }
 
 export async function createProject(payload: Partial<Project>) {
+  const upload = async (image: string, folder: "projects" | "rooms" = "projects") => {
+    if (!image.startsWith("data:image/")) return image;
+    const token = localStorage.getItem("rds-admin-token");
+    const response = await request<{ url: string }>("/admin/uploads", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ image, folder }),
+    });
+    return response.url;
+  };
+  const rooms = [];
+  for (const room of payload.rooms || []) {
+    rooms.push({ ...room, images: await Promise.all(room.images.map((image) => upload(image, "rooms"))) });
+  }
+  const preparedPayload = {
+    ...payload,
+    thumbnail: payload.thumbnail ? await upload(payload.thumbnail) : payload.thumbnail,
+    heroImage: payload.heroImage ? await upload(payload.heroImage) : payload.heroImage,
+    rooms,
+  };
   const token = localStorage.getItem("rds-admin-token");
   return request<Project>("/admin/projects", {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: JSON.stringify(payload),
+    body: JSON.stringify(preparedPayload),
   });
 }
 

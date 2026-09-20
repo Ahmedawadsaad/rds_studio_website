@@ -19,7 +19,7 @@ async function requireAdmin(req: NextApiRequest) {
 async function uploadImage(value: unknown, folder: string) {
   if (typeof value !== "string" || !value.startsWith("data:image/")) return value;
   const match = value.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
-  if (!match) throw new Error("تعذر قراءة بيانات إحدى الصور. اختر ملفات صور صالحة وحاول مرة أخرى.");
+  if (!match) throw new Error("The image data is invalid. Please choose a valid image and try again.");
   const buffer = Buffer.from(match[2], "base64");
   const extension = match[1].split("/")[1].replace("svg+xml", "svg");
   const path = `${folder}/${crypto.randomUUID()}.${extension}`;
@@ -31,13 +31,13 @@ async function uploadImage(value: unknown, folder: string) {
 function friendlyError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
-    return "الصور كبيرة جداً. اختر صوراً أقل أو صوراً بحجم أصغر ثم حاول مرة أخرى.";
+    return "The image is too large. Please choose a smaller image and try again.";
   }
   if (message.includes("duplicate") || message.includes("unique")) {
-    return "يوجد مشروع أو تصنيف بنفس البيانات. غيّر الاسم أو المعرّف ثم حاول مرة أخرى.";
+    return "This item already exists. Please use a different name and try again.";
   }
   if (error instanceof Error && /[\u0600-\u06ff]/.test(error.message)) return error.message;
-  return "تعذر حفظ البيانات. راجع الحقول والصور ثم حاول مرة أخرى.";
+  return "Something went wrong. Please check your details and try again.";
 }
 
 async function uploadProjectImages(payload: any) {
@@ -48,6 +48,17 @@ async function uploadProjectImages(payload: any) {
     result.rooms = await Promise.all(result.rooms.map(async (room: any) => ({ ...room, images: await Promise.all((room.images || []).map((image: string) => uploadImage(image, "rooms"))) })));
   }
   return result;
+}
+
+function publicError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
+    return "The image is too large. Please choose a smaller image and try again.";
+  }
+  if (message.includes("duplicate") || message.includes("unique")) {
+    return "This item already exists. Please use a different name and try again.";
+  }
+  return "Something went wrong. Please check your details and try again.";
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -84,6 +95,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const admin = await requireAdmin(req);
     if (!admin) return res.status(401).json({ message: "Unauthorized" });
+    if (req.method === "POST" && path.join("/") === "admin/uploads") {
+      const folder = req.body?.folder === "site" ? "site" : req.body?.folder === "rooms" ? "rooms" : "projects";
+      const url = await uploadImage(req.body?.image, folder);
+      if (typeof url !== "string") return res.status(400).json({ message: "Please select a valid image file." });
+      return res.status(201).json({ url });
+    }
     if (req.method === "POST" && path.join("/") === "admin/projects") {
       const value = await uploadProjectImages(req.body);
       const row = { ...value, hero_image: value.heroImage, floor_plans: value.floorPlans || [] };
@@ -111,7 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("category", categoryId);
       if (countError) throw countError;
       if ((count || 0) > 0) {
-        return res.status(409).json({ message: "لا يمكن حذف هذا التصنيف لأنه مستخدم في مشاريع. غيّر تصنيف المشاريع أولاً." });
+        return res.status(409).json({ message: "This category cannot be deleted because it is assigned to one or more projects." });
       }
 
       const { data, error } = await supabaseAdmin.from("categories").delete().eq("id", categoryId).select().maybeSingle();
@@ -127,8 +144,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     return res.status(404).json({ message: "Not found" });
   } catch (error) {
-    return res.status(400).json({ message: friendlyError(error) });
+    return res.status(400).json({ message: publicError(error) });
   }
 }
 
-export const config = { api: { bodyParser: { sizeLimit: "50mb" } } };
+export const config = { api: { bodyParser: { sizeLimit: "5mb" } } };

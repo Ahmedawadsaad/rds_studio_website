@@ -258,9 +258,46 @@ function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("تعذر قراءة الصورة. اختر ملف صورة صالحاً وحاول مرة أخرى."));
+    reader.onerror = () => reject(new Error("The image could not be read. Please choose a valid image and try again."));
     reader.readAsDataURL(file);
   });
+}
+
+const MAX_SOURCE_IMAGE_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_IMAGE_SIZE = 2.75 * 1024 * 1024;
+
+function dataUrlFromBlob(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("The image could not be read. Please choose a valid image and try again."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function optimizeImage(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Please select an image file.");
+  if (file.size > MAX_SOURCE_IMAGE_SIZE) throw new Error("Each source image must be smaller than 25 MB.");
+
+  const source = await dataUrlFromBlob(file);
+  const image = new Image();
+  image.src = source;
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("The image could not be processed. Please choose another file."));
+  });
+
+  const scale = Math.min(1, 2000 / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  for (const quality of [0.86, 0.76, 0.66, 0.56]) {
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE) return dataUrlFromBlob(blob);
+  }
+  throw new Error("The image is still too large after compression. Please use a smaller image.");
 }
 
 function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]; onBack: () => void; onSave: (payload: Partial<Project>) => Promise<void> }) {
@@ -287,9 +324,9 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
     if (!file) return;
     try {
       setImageError("");
-      setter(await readImage(file));
+      setter(await optimizeImage(file));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : "تعذر قراءة الصورة. اختر ملف صورة صالحاً وحاول مرة أخرى.");
+      setImageError(error instanceof Error ? error.message : "The image could not be read. Please try again.");
     }
   };
 
@@ -297,10 +334,10 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
     if (!files) return;
     try {
       setImageError("");
-      const images = await Promise.all(Array.from(files).map(readImage));
+      const images = await Promise.all(Array.from(files).map(optimizeImage));
       setRoomSections((current) => current.map((section, sectionIndex) => sectionIndex === index ? { ...section, images } : section));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : "تعذر قراءة الصور. اختر ملفات صور صالحة وحاول مرة أخرى.");
+      setImageError(error instanceof Error ? error.message : "One or more images could not be read. Please try again.");
     }
   };
 
@@ -313,7 +350,11 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
   const submit = async () => {
     setSaveError("");
     if (!form.name.trim() || form.category === "all" || !thumbnail || !heroImage) {
-      setSaveError("أكمل اسم المشروع والتصنيف وصورة الكارد والصورة الرئيسية قبل الحفظ.");
+      setSaveError("Enter the project name, project type, card image, and main image before saving.");
+      return;
+    }
+    if (!form.name.trim() || form.category === "all" || !thumbnail || !heroImage) {
+      setSaveError("Enter the project name, project type, card image, and main image before saving.");
       return;
     }
     setSubmitting(true);
@@ -327,7 +368,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
         floorPlans: [],
       });
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "تعذر حفظ المشروع. راجع الصور والبيانات وحاول مرة أخرى.");
+      setSaveError(error instanceof Error ? error.message : "The project could not be saved. Please check the details and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -350,7 +391,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Category</label>
+            <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Project Type</label>
             <select value={form.category} onChange={(e) => update("category", e.target.value)} className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>
               {categories.filter((category) => category.id !== "all").map((category) => (
                 <option key={category.id} value={category.id}>{category.name}</option>
@@ -385,7 +426,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>Villa Sections</label>
+            <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>Spaces Inside This Project</label>
             <button type="button" onClick={addRoomSection} className="border border-[#c9a46a]/50 px-3 py-2 text-[10px] tracking-[0.2em] uppercase text-[#c9a46a] hover:bg-[#c9a46a] hover:text-[#0c0b09]" style={{ fontFamily: "var(--font-sans)" }}>+ Add Section</button>
           </div>
           {roomSections.map((section, index) => (
@@ -393,7 +434,7 @@ function NewProjectForm({ categories, onBack, onSave }: { categories: Category[]
               <input
                 value={section.name}
                 onChange={(e) => updateRoomName(index, e.target.value)}
-                placeholder="Example: Bathroom or Swimming Pool"
+                placeholder="Example: Reception, Kitchen, Master Bedroom, or Pool"
                 className="mb-3 w-full bg-[#0c0b09] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
                 style={{ fontFamily: "var(--font-sans)" }}
               />
@@ -460,7 +501,8 @@ function CategoriesManager({ categories, onAdded, onDeleted }: { categories: Cat
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-8">
-      <h1 className="text-2xl font-light text-[#f0e8d5] mb-6" style={{ fontFamily: "var(--font-display)" }}>Categories</h1>
+      <h1 className="text-2xl font-light text-[#f0e8d5] mb-2" style={{ fontFamily: "var(--font-display)" }}>Project Types</h1>
+      <p className="max-w-lg mb-6 text-[12px] text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>Project types organize the portfolio. Rooms and spaces are added inside each project.</p>
 
       <div className="max-w-lg space-y-3 border border-[#282318] bg-[#141210] p-4">
         {categories.filter((category) => category.id !== "all").map((category) => (
@@ -510,7 +552,7 @@ function SiteSettingsManager() {
     if (!file) return;
     try {
       setMessage("");
-      setHeroImage(await readImage(file));
+      setHeroImage(await optimizeImage(file));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not read the image.");
     }
