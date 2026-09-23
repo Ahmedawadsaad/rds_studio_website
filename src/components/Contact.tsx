@@ -76,7 +76,7 @@ export default function Contact() {
               <p className="text-[10px] tracking-[0.35em] uppercase text-[#7a6e5e] mb-3" style={{ fontFamily: "var(--font-sans)" }}>
                 On the Web
               </p>
-              <div className="border border-[#6b6254] bg-[#171512]">
+              <div className="contact-social-panel border border-[#6b6254] bg-[#171512]">
                 {[
                   { name: "Facebook", href: STUDIO.facebook, icon: <FacebookIcon /> },
                   { name: "Instagram", href: STUDIO.instagram, icon: <InstagramIcon /> },
@@ -87,7 +87,7 @@ export default function Contact() {
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className={`flex items-center gap-4 px-5 py-4 text-[#fffaf0] hover:bg-[#29251e] transition-colors ${index < links.length - 1 ? "border-b border-[#6b6254]" : ""}`}
+                    className={`contact-social-link flex items-center gap-4 px-5 py-4 text-[#fffaf0] hover:bg-[#29251e] transition-colors ${index < links.length - 1 ? "border-b border-[#6b6254]" : ""}`}
                   >
                     <span className="flex h-7 w-7 items-center justify-center text-[#fffaf0]">{icon}</span>
                     <span className="flex-1 text-[14px]" style={{ fontFamily: "var(--font-sans)" }}>{name}</span>
@@ -156,7 +156,7 @@ export default function Contact() {
 }
 
 function FacebookIcon() {
-  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="fill-[#171512]" d="M13.4 19v-6h2l.3-2.3h-2.3V9.2c0-.7.2-1.2 1.2-1.2h1.2V6h-1.9c-2.1 0-3.2 1.2-3.2 3.2v1.5H9v2.3h1.7v6h2.7Z" /></svg>;
+  return <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path className="facebook-cutout fill-[#171512]" d="M13.4 19v-6h2l.3-2.3h-2.3V9.2c0-.7.2-1.2 1.2-1.2h1.2V6h-1.9c-2.1 0-3.2 1.2-3.2 3.2v1.5H9v2.3h1.7v6h2.7Z" /></svg>;
 }
 
 function BehanceIcon() {
