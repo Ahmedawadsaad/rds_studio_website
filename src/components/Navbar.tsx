@@ -120,7 +120,7 @@ export default function Navbar() {
       {/* Mobile menu */}
       <div
         className={`md:hidden transition-all duration-400 overflow-hidden ${menuOpen ? "max-h-96" : "max-h-0"}`}
-        style={{ background: "rgba(12,11,9,0.98)" }}
+        style={{ background: theme === "light" ? "rgba(220,209,193,0.98)" : "rgba(12,11,9,0.98)" }}
       >
         <div className="px-8 pb-8 pt-2 flex flex-col gap-5">
           {[
@@ -132,7 +132,7 @@ export default function Navbar() {
             <button
               key={id}
               onClick={() => scrollTo(id)}
-              className="nav-link text-left text-[13px] tracking-[0.2em] uppercase text-[#f0e8d5]/70 hover:text-[#c9a46a] transition-colors"
+              className={`nav-link text-left text-[13px] tracking-[0.2em] uppercase transition-colors ${theme === "light" ? "text-[#514b42]" : "text-[#f0e8d5]/70"}`}
               style={{ fontFamily: "var(--font-sans)" }}
             >
               {label}

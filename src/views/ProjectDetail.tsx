@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReveal } from "../components/useReveal";
 import { cacheProject, getProject, type Project } from "../lib/api";
@@ -417,20 +418,20 @@ function RoomImagePreview({ image, roomName, onClose }: { image: string; roomNam
   }, [onClose]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`${roomName} image preview`} className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c0b09]/95 p-3 sm:p-8" onClick={onClose}>
-      <div className="relative flex h-full w-full max-w-6xl flex-col" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 pb-3 text-[#f0e8d5]">
+    createPortal(<div role="dialog" aria-modal="true" aria-label={`${roomName} image preview`} className="fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black" onClick={onClose}>
+      <div className="relative h-full w-full" onClick={(event) => event.stopPropagation()}>
+        <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent p-4 text-white sm:p-6">
           <div className="min-w-0">
             <p className="truncate text-sm sm:text-base" style={{ fontFamily: "var(--font-display)" }}>{roomName}</p>
             <p className="mt-1 text-[9px] tracking-[0.25em] uppercase text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>Image Preview</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close image preview" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#f0e8d5]/35 text-xl transition-colors hover:border-[#c9a46a] hover:text-[#c9a46a]">×</button>
         </div>
-        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden border border-[#282318] bg-black">
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-black">
           <img
             src={image}
             alt={roomName}
-            className="max-h-full max-w-full select-none object-contain transition-transform duration-300 ease-out"
+            className="h-full w-full select-none object-contain transition-transform duration-300 ease-out"
             style={{ transform: `scale(${zoom})` }}
             onWheel={(event) => {
               event.preventDefault();
@@ -438,12 +439,12 @@ function RoomImagePreview({ image, roomName, onClose }: { image: string; roomNam
             }}
           />
         </div>
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#f0e8d5]/25 bg-[#0c0b09]/85 p-1.5 backdrop-blur-md">
+        <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/25 bg-black/75 p-1.5 text-white backdrop-blur-md" style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}>
           <button type="button" onClick={() => setZoom((value) => Math.max(1, value - 0.25))} disabled={zoom === 1} aria-label="Zoom out" className="h-11 w-11 rounded-full text-xl text-[#f0e8d5] disabled:opacity-35">−</button>
           <button type="button" onClick={() => setZoom(1)} className="min-w-14 px-2 text-[10px] tracking-[0.12em] text-[#c9a46a]">{Math.round(zoom * 100)}%</button>
           <button type="button" onClick={() => setZoom((value) => Math.min(3, value + 0.25))} disabled={zoom === 3} aria-label="Zoom in" className="h-11 w-11 rounded-full text-xl text-[#f0e8d5] disabled:opacity-35">+</button>
         </div>
       </div>
-    </div>
+    </div>, document.body)
   );
 }
