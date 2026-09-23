@@ -43,7 +43,7 @@ export default function Navbar() {
       <div className="max-w-[1400px] mx-auto px-8 flex items-center justify-between h-[68px]">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <BrandLogo compact />
+          <BrandLogo compact light={theme === "light"} />
         </Link>
 
         {/* Desktop nav */}
@@ -105,13 +105,13 @@ export default function Navbar() {
             onClick={() => setMenuOpen((v) => !v)}
           >
             <span
-              className={`block w-5 h-px bg-[#f0e8d5] transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2" : ""}`}
+              className={`block w-5 h-px ${theme === "light" ? "bg-[#242321]" : "bg-[#f0e8d5]"} transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2" : ""}`}
             />
             <span
-              className={`block w-5 h-px bg-[#f0e8d5] transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`}
+              className={`block w-5 h-px ${theme === "light" ? "bg-[#242321]" : "bg-[#f0e8d5]"} transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`}
             />
             <span
-              className={`block w-5 h-px bg-[#f0e8d5] transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`}
+              className={`block w-5 h-px ${theme === "light" ? "bg-[#242321]" : "bg-[#f0e8d5]"} transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`}
             />
           </button>
         </div>

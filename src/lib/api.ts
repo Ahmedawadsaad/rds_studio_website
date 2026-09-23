@@ -3,6 +3,8 @@ import { CATEGORIES as fallbackCategories, PROJECTS as fallbackProjects, type Ca
 export type { Category, Project };
 
 const API_BASE = "/api";
+const projectCache = new Map<string, Project>();
+const projectRequests = new Map<string, Promise<Project>>();
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -32,20 +34,47 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export async function getProjects(): Promise<Project[]> {
   try {
-    return await request<Project[]>("/projects");
+    const projects = await request<Project[]>("/projects");
+    projects.forEach((project) => projectCache.set(project.id, project));
+    return projects;
   } catch {
+    fallbackProjects.forEach((project) => projectCache.set(project.id, project));
     return fallbackProjects;
   }
 }
 
 export async function getProject(id: string): Promise<Project> {
+  const cached = projectCache.get(id);
+  if (cached) return cached;
+  const pending = projectRequests.get(id);
+  if (pending) return pending;
+
+  const pendingRequest = (async () => {
   try {
-    return await request<Project>(`/projects/${id}`);
+      const project = await request<Project>(`/projects/${id}`);
+      projectCache.set(project.id, project);
+      return project;
   } catch {
     const fallback = fallbackProjects.find((project) => project.id === id);
-    if (fallback) return fallback;
+      if (fallback) {
+        projectCache.set(fallback.id, fallback);
+        return fallback;
+      }
     throw new Error("Project not found.");
-  }
+    } finally {
+      projectRequests.delete(id);
+    }
+  })();
+  projectRequests.set(id, pendingRequest);
+  return pendingRequest;
+}
+
+export function cacheProject(project: Project) {
+  projectCache.set(project.id, project);
+}
+
+export function prefetchProject(id: string) {
+  void getProject(id).catch(() => undefined);
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -87,6 +116,15 @@ export async function getAdminSession() {
   });
 }
 
+export async function updateAdminPassword(currentPassword: string, password: string) {
+  const token = localStorage.getItem("rds-admin-token");
+  return request<{ ok: boolean; message: string }>("/admin/password", {
+    method: "PUT",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify({ currentPassword, password }),
+  });
+}
+
 async function prepareProjectPayload(payload: Partial<Project>) {
   const upload = async (image: string, folder: "projects" | "rooms" = "projects") => {
     if (!image.startsWith("data:image/")) return image;
@@ -98,14 +136,30 @@ async function prepareProjectPayload(payload: Partial<Project>) {
     });
     return response.url;
   };
-  const rooms = [];
-  for (const room of payload.rooms || []) {
-    rooms.push({ ...room, images: await Promise.all(room.images.map((image) => upload(image, "rooms"))) });
-  }
+  let thumbnail = payload.thumbnail;
+  let heroImage = payload.heroImage;
+  const rooms = (payload.rooms || []).map((room) => ({ ...room, images: [...room.images] }));
+  const uploadTasks: (() => Promise<void>)[] = [];
+
+  if (thumbnail) uploadTasks.push(async () => { thumbnail = await upload(thumbnail!, "projects"); });
+  if (heroImage) uploadTasks.push(async () => { heroImage = await upload(heroImage!, "projects"); });
+  rooms.forEach((room) => room.images.forEach((image, index) => {
+    uploadTasks.push(async () => { room.images[index] = await upload(image, "rooms"); });
+  }));
+
+  let nextTask = 0;
+  const uploadWorker = async () => {
+    while (nextTask < uploadTasks.length) {
+      const task = uploadTasks[nextTask++];
+      await task();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, uploadTasks.length) }, uploadWorker));
+
   const preparedPayload = {
     ...payload,
-    thumbnail: payload.thumbnail ? await upload(payload.thumbnail) : payload.thumbnail,
-    heroImage: payload.heroImage ? await upload(payload.heroImage) : payload.heroImage,
+    thumbnail,
+    heroImage,
     rooms,
   };
   return preparedPayload;

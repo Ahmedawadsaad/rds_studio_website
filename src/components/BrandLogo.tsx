@@ -8,7 +8,7 @@ export default function BrandLogo({ compact = false, light = false }: BrandLogoP
   const markColor = "#b42323";
 
   return (
-    <span className="inline-flex bg-[#050505]" aria-label="Red Door Studio">
+    <span className={`inline-flex ${light ? "bg-transparent" : "bg-[#050505]"}`} aria-label="Red Door Studio">
       <svg viewBox="0 0 132 132" className={compact ? "h-14 w-14" : "h-36 w-36"} role="img">
         <defs>
           <path id="brandLogoPath" d="M66,66 m-49,0 a49,49 0 1,1 98,0 a49,49 0 1,1 -98,0" />

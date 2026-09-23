@@ -4,7 +4,6 @@ import ProjectsGrid from "../components/ProjectsGrid";
 import About from "../components/About";
 import Services from "../components/Services";
 import Contact from "../components/Contact";
-import { Link } from "react-router-dom";
 import { STUDIO } from "../data";
 import BrandLogo from "../components/BrandLogo";
 
@@ -39,8 +38,7 @@ function Footer() {
           className="footer-legal text-[10px] tracking-[0.15em] text-[#7a6e5e]"
           style={{ fontFamily: "var(--font-sans)" }}
         >
-          © {new Date().getFullYear()} Red Door Studio. All rights reserved. &nbsp;·&nbsp;{" "}
-          <Link to="/admin" className="hover:text-[#c9a46a] transition-colors">Admin</Link>
+          © {new Date().getFullYear()} Red Door Studio. All rights reserved.
         </p>
         <div className="flex items-center gap-4">
           <a

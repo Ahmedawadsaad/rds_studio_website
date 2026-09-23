@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getProjects, type Category, type Project } from "../lib/api";
+import { cacheProject, getCategories, getProjects, prefetchProject, type Category, type Project } from "../lib/api";
 
 const defaultCategories: Category[] = [
   { id: "all", name: "All Projects", count: 0 },
@@ -60,7 +60,7 @@ export default function ProjectsGrid() {
   }, []);
 
   return (
-    <section id="projects" ref={sectionRef} className="py-32 px-8 max-w-[1400px] mx-auto">
+    <section id="projects" ref={sectionRef} className="pb-16 pt-24 px-4 sm:px-8 max-w-[1400px] mx-auto">
       <div className="mb-16">
         <p className="reveal text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-4" style={{ fontFamily: "var(--font-sans)" }}>
           Our Projects
@@ -96,7 +96,16 @@ export default function ProjectsGrid() {
         className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[#282318] transition-opacity duration-200 ${animating ? "opacity-0" : "opacity-100"}`}
       >
         {displayed.map((project, i) => (
-          <ProjectCard key={project.id} project={project} index={i} onOpen={() => navigate(`/project/${project.id}`)} />
+          <ProjectCard
+            key={project.id}
+            project={project}
+            index={i}
+            onOpen={() => {
+              cacheProject(project);
+              navigate(`/project/${project.id}`, { state: { project } });
+            }}
+            onPreload={() => prefetchProject(project.id)}
+          />
         ))}
       </div>
     </section>
@@ -107,10 +116,12 @@ function ProjectCard({
   project,
   index,
   onOpen,
+  onPreload,
 }: {
   project: Project;
   index: number;
   onOpen: () => void;
+  onPreload: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -139,12 +150,16 @@ function ProjectCard({
       style={{ animationDelay: `${index * 0.07}s` }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onPointerEnter={onPreload}
+      onTouchStart={onPreload}
       onClick={onOpen}
       data-cursor="Open"
     >
       <img
         src={project.thumbnail}
         alt={project.name}
+        loading="lazy"
+        decoding="async"
         className="w-full h-full object-cover transition-transform duration-700"
         style={{ transform: hovered ? "scale(1.06)" : "scale(1)" }}
       />

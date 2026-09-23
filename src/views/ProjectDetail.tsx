@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReveal } from "../components/useReveal";
-import { getProject, type Project } from "../lib/api";
+import { cacheProject, getProject, type Project } from "../lib/api";
 import { PROJECTS } from "../data";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const localProject = id ? PROJECTS.find((item) => item.id === id) || null : null;
+  const location = useLocation();
+  const routeProject = (location.state as { project?: Project } | null)?.project;
+  const localProject = (routeProject?.id === id ? routeProject : id ? PROJECTS.find((item) => item.id === id) : null) || null;
   const [project, setProject] = useState<Project | null>(localProject);
   const [loading, setLoading] = useState(!localProject);
   const [floorTab, setFloorTab] = useState(0);
@@ -23,7 +25,8 @@ export default function ProjectDetail() {
         return;
       }
 
-      const cachedProject = PROJECTS.find((item) => item.id === id) || null;
+      const cachedProject = routeProject?.id === id ? routeProject : PROJECTS.find((item) => item.id === id) || null;
+      if (cachedProject) cacheProject(cachedProject);
       setProject(cachedProject);
       setLoading(!cachedProject);
       try {
@@ -39,7 +42,7 @@ export default function ProjectDetail() {
     window.scrollTo(0, 0);
     const t = setTimeout(() => setEntered(true), 80);
     return () => clearTimeout(t);
-  }, [id]);
+  }, [id, routeProject]);
 
   if (loading) {
     return (
@@ -69,33 +72,34 @@ export default function ProjectDetail() {
       className="min-h-screen bg-[#0c0b09]"
       style={{ opacity: entered ? 1 : 0, transition: "opacity 0.6s ease" }}
     >
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center gap-4 px-8 h-[68px] bg-[#0c0b09]/90 backdrop-blur-md border-b border-[#282318]">
+      <div className="detail-topbar fixed top-0 left-0 right-0 z-50 flex h-[68px] items-center gap-2 border-b border-[#282318] bg-[#0c0b09]/90 px-4 backdrop-blur-md sm:gap-4 sm:px-8">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-3 text-[11px] tracking-[0.3em] uppercase text-[#7a6e5e] hover:text-[#c9a46a] transition-colors"
+          className="detail-back-button flex items-center gap-2 text-[9px] tracking-[0.18em] uppercase text-[#7a6e5e] transition-colors hover:text-[#c9a46a] sm:gap-3 sm:text-[11px] sm:tracking-[0.3em]"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           <span className="text-base">←</span>
           Back to Projects
         </button>
-        <span className="text-[#282318] mx-2">|</span>
+        <span className="detail-topbar-divider mx-1 text-[#282318] sm:mx-2">|</span>
         <span
-          className="detail-header-title text-[11px] tracking-[0.2em] uppercase text-[#f0e8d5]/70"
+          className="detail-header-title truncate text-[9px] tracking-[0.14em] uppercase text-[#f0e8d5]/70 sm:text-[11px] sm:tracking-[0.2em]"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           {project.name}
         </span>
       </div>
 
-      <div className="relative h-[190px] sm:h-[240px] overflow-hidden bg-[#141210]">
+      <div className="relative overflow-hidden bg-[#141210] pt-[68px]">
         <img
           src={project.heroImage}
           alt={project.name}
-          className="w-full h-full object-cover"
-          style={{ transform: "scale(1.04)", transformOrigin: "center" }}
+          fetchPriority="high"
+          decoding="async"
+          className="block h-auto max-h-[70svh] w-full object-contain sm:max-h-[75svh]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09]/85 via-transparent to-[#0c0b09]/30" />
-        <div className="absolute bottom-4 left-5 md:bottom-6 md:left-16">
+        <div className="absolute bottom-4 left-4 right-4 sm:left-5 sm:right-auto md:bottom-6 md:left-16">
           <p
             className="detail-hero-meta text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-3"
             style={{ fontFamily: "var(--font-sans)" }}
@@ -117,7 +121,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-8 py-6" ref={revealRef}>
+      <div className="max-w-[1200px] mx-auto px-4 py-6 sm:px-8" ref={revealRef}>
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10">
           <p
             className="text-[1.05rem] text-[#c4b89a]/70 leading-[1.8] font-light"
@@ -153,7 +157,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-8 pb-10">
+      <div className="max-w-[1200px] mx-auto px-4 pb-10 sm:px-8">
         <div className="flex flex-wrap gap-2 border-b border-[#282318] pb-5">
           <ContentTab active={contentView === "overview"} onClick={() => setContentView("overview")}>Full Project</ContentTab>
           {project.rooms.length > 0 && <ContentTab active={contentView === "spaces"} onClick={() => setContentView("spaces")}>Browse by Space</ContentTab>}
@@ -162,10 +166,10 @@ export default function ProjectDetail() {
       </div>
 
       {contentView === "overview" && (
-        <div className="max-w-[1200px] mx-auto px-8 pb-20">
+        <div className="max-w-[1200px] mx-auto px-4 pb-20 sm:px-8">
           <p className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-6" style={{ fontFamily: "var(--font-sans)" }}>Full Project View</p>
-          <div className="relative aspect-[16/9] overflow-hidden border border-[#282318] bg-[#141210]">
-            <img src={project.heroImage} alt={`${project.name} full project`} className="h-full w-full object-cover" />
+          <div className="relative overflow-hidden border border-[#282318] bg-[#141210]">
+            <img src={project.heroImage} alt={`${project.name} full project`} decoding="async" className="block h-auto max-h-[75svh] w-full object-contain" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0c0b09]/75 via-transparent" />
             <p className="absolute bottom-5 left-5 text-[11px] tracking-[0.25em] uppercase text-[#f0e8d5]" style={{ fontFamily: "var(--font-sans)" }}>
               {project.rooms.length} spaces · {project.floorPlans.length} floor plan{project.floorPlans.length === 1 ? "" : "s"}
@@ -175,7 +179,7 @@ export default function ProjectDetail() {
       )}
 
       {contentView === "plans" && project.floorPlans.length > 0 && (
-        <div className="max-w-[1200px] mx-auto px-8 pb-24">
+        <div className="max-w-[1200px] mx-auto px-4 pb-24 sm:px-8">
           <p
             className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-8"
             style={{ fontFamily: "var(--font-sans)" }}
@@ -219,7 +223,7 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {contentView === "spaces" && <div className="max-w-[1200px] mx-auto px-8 pb-20">
+      {contentView === "spaces" && <div className="max-w-[1200px] mx-auto px-4 pb-20 sm:px-8">
         <p
           className="text-[10px] tracking-[0.5em] uppercase text-[#c9a46a] mb-6"
           style={{ fontFamily: "var(--font-sans)" }}
@@ -295,6 +299,7 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -344,6 +349,16 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
             aria-hidden={imageIndex !== activeImage}
           />
         ))}
+        <button
+          type="button"
+          aria-label={`Zoom ${room.name} image`}
+          onClick={() => setPreviewImage(room.images[activeImage])}
+          className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-[#f0e8d5]/40 bg-[#0c0b09]/70 text-[#f0e8d5] backdrop-blur-sm transition-all hover:scale-105 hover:border-[#c9a46a] hover:bg-[#c9a46a] hover:text-[#0c0b09] focus:outline-none focus:ring-2 focus:ring-[#c9a46a]"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.7">
+            <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
         {room.images.length > 1 && (
           <>
             <button
@@ -369,6 +384,8 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
         )}
       </div>
 
+      {previewImage && <RoomImagePreview image={previewImage} roomName={room.name} onClose={() => setPreviewImage(null)} />}
+
       {room.materials && room.materials.length > 0 && (
         <div className="flex flex-wrap gap-3 mt-5">
           {room.materials.map((m) => (
@@ -382,6 +399,51 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function RoomImagePreview({ image, roomName, onClose }: { image: string; roomName: string; onClose: () => void }) {
+  const [zoom, setZoom] = useState(1);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "+" || event.key === "=") setZoom((value) => Math.min(3, value + 0.25));
+      if (event.key === "-") setZoom((value) => Math.max(1, value - 0.25));
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`${roomName} image preview`} className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c0b09]/95 p-3 sm:p-8" onClick={onClose}>
+      <div className="relative flex h-full w-full max-w-6xl flex-col" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 pb-3 text-[#f0e8d5]">
+          <div className="min-w-0">
+            <p className="truncate text-sm sm:text-base" style={{ fontFamily: "var(--font-display)" }}>{roomName}</p>
+            <p className="mt-1 text-[9px] tracking-[0.25em] uppercase text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>Image Preview</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close image preview" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#f0e8d5]/35 text-xl transition-colors hover:border-[#c9a46a] hover:text-[#c9a46a]">×</button>
+        </div>
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden border border-[#282318] bg-black">
+          <img
+            src={image}
+            alt={roomName}
+            className="max-h-full max-w-full select-none object-contain transition-transform duration-300 ease-out"
+            style={{ transform: `scale(${zoom})` }}
+            onWheel={(event) => {
+              event.preventDefault();
+              setZoom((value) => Math.min(3, Math.max(1, value + (event.deltaY < 0 ? 0.2 : -0.2))));
+            }}
+          />
+        </div>
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#f0e8d5]/25 bg-[#0c0b09]/85 p-1.5 backdrop-blur-md">
+          <button type="button" onClick={() => setZoom((value) => Math.max(1, value - 0.25))} disabled={zoom === 1} aria-label="Zoom out" className="h-11 w-11 rounded-full text-xl text-[#f0e8d5] disabled:opacity-35">−</button>
+          <button type="button" onClick={() => setZoom(1)} className="min-w-14 px-2 text-[10px] tracking-[0.12em] text-[#c9a46a]">{Math.round(zoom * 100)}%</button>
+          <button type="button" onClick={() => setZoom((value) => Math.min(3, value + 0.25))} disabled={zoom === 3} aria-label="Zoom in" className="h-11 w-11 rounded-full text-xl text-[#f0e8d5] disabled:opacity-35">+</button>
+        </div>
+      </div>
     </div>
   );
 }

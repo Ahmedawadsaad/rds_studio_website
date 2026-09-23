@@ -197,7 +197,7 @@ export default function Hero() {
             Red Door Studio — Cairo
           </p>
           <h1
-            className="text-[clamp(2.4rem,6vw,5.5rem)] leading-[1.05] font-light text-[#f0e8d5] max-w-4xl"
+            className="hero-title text-[clamp(2.4rem,6vw,5.5rem)] leading-[1.05] font-light text-[#f0e8d5] max-w-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
             We Design Homes{" "}
@@ -207,7 +207,7 @@ export default function Hero() {
             the Ground Up
           </h1>
           <p
-            className="mt-6 text-[13px] text-[#f0e8d5]/45 max-w-sm leading-relaxed"
+            className="hero-subtitle mt-6 max-w-sm text-[13px] leading-relaxed text-[#f0e8d5]/45"
             style={{ fontFamily: "var(--font-sans)", fontWeight: 300 }}
           >
             Full-service architecture & interior design for the complete villa —
@@ -221,7 +221,7 @@ export default function Hero() {
           style={{ opacity: scrollIndicatorOpacity }}
         >
           <span
-            className="text-[9px] tracking-[0.5em] uppercase text-[#f0e8d5]/30"
+            className="hero-scroll-label text-[9px] tracking-[0.5em] uppercase text-[#f0e8d5]/30"
             style={{ fontFamily: "var(--font-sans)" }}
           >
             Scroll

@@ -38,6 +38,33 @@ async function uploadProjectImages(payload: any) {
   return result;
 }
 
+function projectImageUrls(project: any): string[] {
+  if (!project) return [];
+  return [
+    project.thumbnail,
+    project.hero_image ?? project.heroImage,
+    ...(project.rooms || []).flatMap((room: any) => room.images || []),
+    ...(project.floor_plans ?? project.floorPlans ?? []).map((plan: any) => plan.image),
+  ].filter((value): value is string => typeof value === "string");
+}
+
+function storagePathFromUrl(url: string): string | null {
+  const marker = "/storage/v1/object/public/project-images/";
+  const index = url.indexOf(marker);
+  return index === -1 ? null : decodeURIComponent(url.slice(index + marker.length));
+}
+
+async function removeProjectImages(project: any, keepUrls: string[] = []) {
+  const keep = new Set(keepUrls);
+  const paths = [...new Set(projectImageUrls(project)
+    .filter((url) => !keep.has(url))
+    .map(storagePathFromUrl)
+    .filter((path): path is string => Boolean(path)))];
+  if (!paths.length) return;
+  const { error } = await supabaseAdmin.storage.from("project-images").remove(paths);
+  if (error) throw error;
+}
+
 function publicError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
@@ -92,13 +119,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const isKnownAdminRoute =
       (req.method === "GET" && adminPath === "admin/me") ||
       (req.method === "POST" && (adminPath === "admin/uploads" || adminPath === "admin/projects" || adminPath === "admin/categories")) ||
-      (req.method === "PUT" && (adminPath === "admin/site-settings" || (path.length === 3 && path[1] === "projects" && Boolean(path[2])))) ||
+      (req.method === "PUT" && (adminPath === "admin/site-settings" || adminPath === "admin/password" || (path.length === 3 && path[1] === "projects" && Boolean(path[2])))) ||
       (req.method === "DELETE" && (path.length === 3 && (path[1] === "projects" || path[1] === "categories") && Boolean(path[2])));
     if (!isKnownAdminRoute) return res.status(404).json({ message: "Not found" });
     const admin = await requireAdmin(req);
     if (!admin) return res.status(401).json({ message: "Unauthorized" });
     if (req.method === "GET" && path.join("/") === "admin/me") {
       return res.json({ user: { id: admin.auth.id, name: admin.profile.name, email: admin.auth.email, role: admin.profile.role, companyName: admin.profile.company_name } });
+    }
+    if (req.method === "PUT" && adminPath === "admin/password") {
+      const password = req.body?.password;
+      const currentPassword = req.body?.currentPassword;
+      if (typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({ message: "Your new password must be at least 8 characters." });
+      }
+      if (typeof currentPassword !== "string") return res.status(400).json({ message: "Enter your current password." });
+      const { error: verifyError } = await supabaseAuth.auth.signInWithPassword({ email: admin.auth.email!, password: currentPassword });
+      if (verifyError) return res.status(400).json({ message: "Your current password is incorrect." });
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(admin.auth.id, { password });
+      if (error) throw error;
+      return res.json({ ok: true, message: "Password updated successfully." });
     }
     if (req.method === "POST" && path.join("/") === "admin/uploads") {
       const folder = req.body?.folder === "site" ? "site" : req.body?.folder === "rooms" ? "rooms" : "projects";
@@ -115,18 +155,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(201).json(projectOut(data));
     }
     if (req.method === "PUT" && path[0] === "admin" && path[1] === "projects" && path[2]) {
+      const { data: existing, error: existingError } = await supabaseAdmin.from("projects").select("*").eq("id", path[2]).maybeSingle();
+      if (existingError) throw existingError;
+      if (!existing) return res.status(404).json({ message: "Project not found" });
       const value = await uploadProjectImages(req.body);
       const row = { ...value, hero_image: value.heroImage, floor_plans: value.floorPlans || [] };
       delete row.id; delete row.heroImage; delete row.floorPlans; delete row.createdAt; delete row.updatedAt; delete row.created_at; delete row.updated_at;
       const { data, error } = await supabaseAdmin.from("projects").update(row).eq("id", path[2]).select().maybeSingle();
       if (error) throw error;
       if (!data) return res.status(404).json({ message: "Project not found" });
+      await removeProjectImages(existing, projectImageUrls(data));
       return res.json(projectOut(data));
     }
     if (req.method === "DELETE" && path[0] === "admin" && path[1] === "projects") {
       const { data, error } = await supabaseAdmin.from("projects").delete().eq("id", path[2]).select().maybeSingle();
       if (error) throw error;
       if (!data) return res.status(404).json({ message: "Project not found" });
+      await removeProjectImages(data);
       return res.json({ ok: true, message: "Project deleted" });
     }
     if (req.method === "POST" && path.join("/") === "admin/categories") {

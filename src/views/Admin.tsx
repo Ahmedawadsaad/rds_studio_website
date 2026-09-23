@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addCategory, createProject, deleteCategory, deleteProject, getAdminSession, getCategories, getProjects, loginAdmin, updateProject, updateSiteSettings, type Category, type Project } from "../lib/api";
+import { addCategory, createProject, deleteCategory, deleteProject, getAdminSession, getCategories, getProjects, loginAdmin, updateAdminPassword, updateProject, updateSiteSettings, type Category, type Project } from "../lib/api";
 
-type AdminView = "dashboard" | "projects" | "new-project" | "edit-project" | "categories" | "site-settings";
+type AdminView = "dashboard" | "projects" | "new-project" | "edit-project" | "categories" | "site-settings" | "account";
 
 type AdminSession = {
   token: string;
@@ -113,6 +113,7 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
     { id: "projects", label: "Projects", icon: Icon.folder },
     { id: "categories", label: "Categories", icon: Icon.tag },
     { id: "site-settings", label: "Site Settings", icon: "◉" },
+    { id: "account", label: "Account", icon: "●" },
   ];
 
   return (
@@ -266,7 +267,7 @@ function readImage(file: File): Promise<string> {
 }
 
 const MAX_SOURCE_IMAGE_SIZE = 25 * 1024 * 1024;
-const MAX_UPLOAD_IMAGE_SIZE = 2.75 * 1024 * 1024;
+const MAX_UPLOAD_IMAGE_SIZE = 2.4 * 1024 * 1024;
 
 function dataUrlFromBlob(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -289,13 +290,14 @@ async function optimizeImage(file: File): Promise<string> {
     image.onerror = () => reject(new Error("The image could not be processed. Please choose another file."));
   });
 
-  const scale = Math.min(1, 2000 / Math.max(image.width, image.height));
+  // Preserve enough detail for large hero images while staying below the API body limit.
+  const scale = Math.min(1, 2560 / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
   canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  for (const quality of [0.86, 0.76, 0.66, 0.56]) {
+  for (const quality of [0.9, 0.84, 0.78, 0.72]) {
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
     if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE) return dataUrlFromBlob(blob);
   }
@@ -455,7 +457,7 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
     <div>
       <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>{label}</label>
       <input type="file" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} className="block w-full text-[12px] text-[#7a6e5e] file:mr-4 file:border-0 file:bg-[#c9a46a] file:px-4 file:py-3 file:text-[11px] file:tracking-[0.15em] file:uppercase file:text-[#0c0b09]" />
-      {value && <img src={value} alt={`${label} preview`} className="mt-3 h-28 w-full object-cover border border-[#282318]" />}
+      {value && <img src={value} alt={`${label} preview`} className="mt-3 h-28 w-full object-contain border border-[#282318] bg-[#0c0b09]" />}
     </div>
   );
 }
@@ -535,6 +537,58 @@ function CategoriesManager({ categories, onAdded, onDeleted }: { categories: Cat
           {loading ? "Adding..." : "+ Add"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function AccountManager() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+    if (!currentPassword) return setMessage("Enter your current password.");
+    if (newPassword.length < 8) return setMessage("Your new password must be at least 8 characters.");
+    if (newPassword !== confirmPassword) return setMessage("The new passwords do not match.");
+
+    setSaving(true);
+    try {
+      await updateAdminPassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setMessage("Password updated successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update your password.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>Account</h1>
+        <p className="mt-1 text-[12px] text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>Change the password for this admin account.</p>
+      </div>
+      <form onSubmit={submit} className="max-w-lg space-y-5 border border-[#282318] bg-[#141210] p-5">
+        {[
+          ["Current Password", currentPassword, setCurrentPassword],
+          ["New Password", newPassword, setNewPassword],
+          ["Confirm New Password", confirmPassword, setConfirmPassword],
+        ].map(([label, value, setter]) => (
+          <div key={label as string}>
+            <label className="mb-2 block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e]" style={{ fontFamily: "var(--font-sans)" }}>{label as string}</label>
+            <input type="password" autoComplete="new-password" required value={value as string} onChange={(event) => (setter as (value: string) => void)(event.target.value)} className="w-full border border-[#282318] bg-[#0c0b09] px-4 py-3 text-[13px] text-[#f0e8d5] focus:border-[#c9a46a] focus:outline-none" />
+          </div>
+        ))}
+        {message && <p className={`text-[11px] ${message.includes("successfully") ? "text-[#c9a46a]" : "text-red-400/80"}`}>{message}</p>}
+        <button type="submit" disabled={saving} className="bg-[#c9a46a] px-6 py-3 text-[11px] tracking-[0.25em] uppercase text-[#0c0b09] hover:bg-[#b8904f] disabled:opacity-60" style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}>{saving ? "Updating..." : "Update Password"}</button>
+      </form>
     </div>
   );
 }
@@ -680,6 +734,7 @@ export default function Admin() {
           {view === "new-project" && <NewProjectForm categories={categories} onBack={() => setView("projects")} onSave={handleCreateProject} />}
           {view === "edit-project" && editingProject && <NewProjectForm categories={categories} initialProject={editingProject} onBack={() => { setEditingProject(null); setView("projects"); }} onSave={handleUpdateProject} />}
           {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} onDeleted={(id) => setCategories((current) => current.filter((category) => category.id !== id))} />}
+          {view === "account" && <AccountManager />}
           {view === "site-settings" && <SiteSettingsManager />}
         </div>
       </main>

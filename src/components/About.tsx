@@ -4,7 +4,7 @@ export default function About() {
   const ref = useReveal();
 
   return (
-    <section id="about" ref={ref} className="py-32 px-8 max-w-[1400px] mx-auto">
+    <section id="about" ref={ref} className="py-20 px-4 sm:px-8 max-w-[1400px] mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
         {/* Image */}
         <div className="reveal-mask relative aspect-[3/4] overflow-hidden bg-[#141210]">
