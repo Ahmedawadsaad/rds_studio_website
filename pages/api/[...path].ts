@@ -89,12 +89,21 @@ async function removeProjectImages(project: any, keepUrls: string[] = []) {
 function publicError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("payload") || message.includes("too large") || message.includes("size")) {
-    return "The image is too large. Please choose a smaller image and try again.";
+    return "This image is too large. Please choose a smaller image and try again.";
   }
   if (message.includes("duplicate") || message.includes("unique")) {
-    return "This item already exists. Please use a different name and try again.";
+    return "An item with this name already exists. Choose a different name and try again.";
   }
-  return "Something went wrong. Please check your details and try again.";
+  if (message.includes("column") || message.includes("schema cache") || message.includes("does not exist")) {
+    return "This feature needs a database update before it can be used. Please contact the site owner.";
+  }
+  if (message.includes("password") || message.includes("weak_password")) {
+    return "Choose a stronger password. Use at least 8 characters and avoid common passwords.";
+  }
+  if (message.includes("storage") || message.includes("bucket") || message.includes("image")) {
+    return "We couldn't save this image. Try a different image or try again later.";
+  }
+  return "We couldn't complete that request. Check your internet connection and try again. If the problem continues, contact the site owner.";
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -138,12 +147,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === "POST" && path.join("/") === "admin/login") {
       const { email, password } = req.body || {};
       const { data, error } = await supabaseAuth.auth.signInWithPassword({ email: email?.toLowerCase(), password });
-      if (error || !data.user || !data.session) return res.status(401).json({ message: "Invalid credentials" });
+      if (error || !data.user || !data.session) return res.status(401).json({ message: "Your email or password is incorrect. Please check both and try again." });
       const { data: profile } = await supabaseAdmin.from("admin_profiles").select("*").eq("id", data.user.id).maybeSingle();
-      if (!profile?.active) return res.status(403).json({ message: "Admin access required" });
+      if (!profile?.active) return res.status(403).json({ message: "This account does not have admin access. Please contact the site owner." });
       return res.json({ token: data.session.access_token, user: { id: data.user.id, name: profile.name, email: data.user.email, role: profile.role, companyName: profile.company_name } });
     }
-    if (path[0] !== "admin") return res.status(404).json({ message: "Not found" });
+    if (path[0] !== "admin") return res.status(404).json({ message: "We couldn't find that page. Check the address and try again." });
     const adminPath = path.join("/");
     const isKnownAdminRoute =
       (req.method === "GET" && adminPath === "admin/me") ||
@@ -151,9 +160,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (req.method === "PUT" && (adminPath === "admin/site-settings" || adminPath === "admin/password" || (path.length === 3 && path[1] === "projects" && Boolean(path[2])))) ||
       (req.method === "PUT" && adminPath === "admin/site-content") ||
       (req.method === "DELETE" && (path.length === 3 && (path[1] === "projects" || path[1] === "categories") && Boolean(path[2])));
-    if (!isKnownAdminRoute) return res.status(404).json({ message: "Not found" });
+    if (!isKnownAdminRoute) return res.status(404).json({ message: "We couldn't find that admin page. Please return to the admin dashboard." });
     const admin = await requireAdmin(req);
-    if (!admin) return res.status(401).json({ message: "Unauthorized" });
+    if (!admin) return res.status(401).json({ message: "Your sign-in has expired. Please sign in again." });
     if (req.method === "GET" && path.join("/") === "admin/me") {
       return res.json({ user: { id: admin.auth.id, name: admin.profile.name, email: admin.auth.email, role: admin.profile.role, companyName: admin.profile.company_name } });
     }
@@ -243,7 +252,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         phone: String(body.phone || "").trim().slice(0, 60),
       };
       if (!content.email || !content.phone || !content.projects_completed || !content.years_experience || paragraphs.length !== 3 || paragraphs.some((text: string) => !text)) {
-        return res.status(400).json({ message: "Complete all About, statistics, phone and email fields." });
+        return res.status(400).json({ message: "Fill in all three About paragraphs, both statistics, your phone number, and your email before saving." });
       }
       const { data: currentSettings, error: currentError } = await supabaseAdmin.from("site_settings").select("hero_image").eq("key", "public-site").maybeSingle();
       if (currentError) throw currentError;
@@ -251,7 +260,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw error;
       return res.json(siteContentOut(data));
     }
-    return res.status(404).json({ message: "Not found" });
+    return res.status(404).json({ message: "We couldn't find that page. Check the address and try again." });
   } catch (error) {
     return res.status(500).json({ message: publicError(error) });
   }

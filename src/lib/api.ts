@@ -9,13 +9,18 @@ const projectRequests = new Map<string, Promise<Project>>();
 let siteContentRequest: Promise<SiteContent> | undefined;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error("We couldn't connect to the website. Check your internet connection and try again.");
+  }
 
   if (!response.ok) {
     const text = await response.text();
@@ -24,10 +29,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
     try {
       const body = JSON.parse(text) as { message?: string };
-      throw new Error(body.message || "The request could not be completed. Please try again.");
+      throw new Error(body.message || "We couldn't complete your request. Please try again.");
     } catch (error) {
       if (error instanceof Error && !(error instanceof SyntaxError)) throw error;
-      throw new Error("The request could not be completed. Please try again.");
+      throw new Error("We couldn't complete your request. Please try again.");
     }
   }
 

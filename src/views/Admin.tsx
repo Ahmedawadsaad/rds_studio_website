@@ -38,6 +38,10 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password) {
+      setError("Enter your email and password, then try again.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -46,8 +50,8 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
       localStorage.setItem(STORAGE_KEYS.token, session.token);
       localStorage.setItem("rds-admin-session", JSON.stringify(session));
       onLogin(session);
-    } catch {
-      setError("Invalid credentials. Use the seeded admin account.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "We couldn't sign you in. Check your details and try again.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +71,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
             <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Email</label>
             <input
               type="email"
-              autoComplete="off"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
@@ -79,7 +83,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
             <label className="block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mb-2" style={{ fontFamily: "var(--font-sans)" }}>Password</label>
             <input
               type="password"
-              autoComplete="new-password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#141210] border border-[#282318] text-[#f0e8d5] text-[13px] px-4 py-3 focus:outline-none focus:border-[#c9a46a]"
@@ -368,7 +372,7 @@ function NewProjectForm({ categories, onBack, onSave, initialProject }: { catego
     <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="flex items-start gap-3 mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>← Back</button>
+          <button onClick={onBack} className="text-[11px] tracking-[0.2em] uppercase text-[#7a6e5e] hover:text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>{"\u2190"} Back</button>
           <h1 className="text-xl md:text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>{initialProject ? "Edit Project" : "Add New Project"}</h1>
         </div>
       </div>
