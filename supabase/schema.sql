@@ -36,8 +36,19 @@ create table if not exists public.admin_profiles (
 create table if not exists public.site_settings (
   key text primary key,
   hero_image text not null,
+  about_paragraphs jsonb not null default '[]'::jsonb,
+  projects_completed text not null default '60+',
+  years_experience text not null default '8',
+  email text not null default 'reddoorstudio25@gmail.com',
+  phone text not null default '+20 11 18324473',
   updated_at timestamptz not null default now()
 );
+
+alter table public.site_settings add column if not exists about_paragraphs jsonb not null default '[]'::jsonb;
+alter table public.site_settings add column if not exists projects_completed text not null default '60+';
+alter table public.site_settings add column if not exists years_experience text not null default '8';
+alter table public.site_settings add column if not exists email text not null default 'reddoorstudio25@gmail.com';
+alter table public.site_settings add column if not exists phone text not null default '+20 11 18324473';
 
 insert into storage.buckets (id, name, public)
 values ('project-images', 'project-images', true)

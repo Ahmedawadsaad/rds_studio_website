@@ -2,6 +2,27 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin, supabaseAuth } from "../../lib/supabaseAdmin";
 
 const defaultHeroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format";
+const defaultSiteContent = {
+  aboutParagraphs: [
+    "Red Door Studio was founded in Cairo with a single conviction: that every Egyptian family deserves a home designed with the same rigour and sensitivity as the great houses of the Mediterranean. We do not separate architecture from interior design — they are one discipline.",
+    "Our process begins with listening. We map the way you move through your days — morning light at breakfast, evening gathering in the kitchen, the quality of silence in a bedroom — and translate those rhythms into floor plans, volumes, and materials.",
+    "The palette we return to — black Marquina marble, custom walnut millwork, brushed brass, olive cabinetry — is not a signature style imposed on clients. It is a vocabulary we reach for because these materials age honestly, photograph beautifully, and endure.",
+  ],
+  projectsCompleted: "60+",
+  yearsExperience: "8",
+  email: "reddoorstudio25@gmail.com",
+  phone: "+20 11 18324473",
+};
+
+function siteContentOut(row: any) {
+  return {
+    aboutParagraphs: Array.isArray(row?.about_paragraphs) && row.about_paragraphs.length === 3 ? row.about_paragraphs : defaultSiteContent.aboutParagraphs,
+    projectsCompleted: row?.projects_completed || defaultSiteContent.projectsCompleted,
+    yearsExperience: row?.years_experience || defaultSiteContent.yearsExperience,
+    email: row?.email || defaultSiteContent.email,
+    phone: row?.phone || defaultSiteContent.phone,
+  };
+}
 
 function projectOut(project: any) {
   return { ...project, heroImage: project.hero_image, floorPlans: project.floor_plans || [], createdAt: project.created_at, updatedAt: project.updated_at };
@@ -102,9 +123,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.json((categories || []).map((category) => ({ ...category, count: counts.get(category.id) || 0 })));
     }
     if (req.method === "GET" && path[0] === "site-settings") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.setHeader("Pragma", "no-cache");
       const { data, error } = await supabaseAdmin.from("site_settings").select("hero_image").eq("key", "public-site").maybeSingle();
       if (error) throw error;
       return res.json({ heroImage: data?.hero_image || defaultHeroImage });
+    }
+    if (req.method === "GET" && path[0] === "site-content") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      const { data, error } = await supabaseAdmin.from("site_settings").select("about_paragraphs, projects_completed, years_experience, email, phone").eq("key", "public-site").maybeSingle();
+      if (error) throw error;
+      return res.json(siteContentOut(data));
     }
     if (req.method === "POST" && path.join("/") === "admin/login") {
       const { email, password } = req.body || {};
@@ -120,6 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (req.method === "GET" && adminPath === "admin/me") ||
       (req.method === "POST" && (adminPath === "admin/uploads" || adminPath === "admin/projects" || adminPath === "admin/categories")) ||
       (req.method === "PUT" && (adminPath === "admin/site-settings" || adminPath === "admin/password" || (path.length === 3 && path[1] === "projects" && Boolean(path[2])))) ||
+      (req.method === "PUT" && adminPath === "admin/site-content") ||
       (req.method === "DELETE" && (path.length === 3 && (path[1] === "projects" || path[1] === "categories") && Boolean(path[2])));
     if (!isKnownAdminRoute) return res.status(404).json({ message: "Not found" });
     const admin = await requireAdmin(req);
@@ -196,10 +226,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.json({ ok: true, message: "Category deleted" });
     }
     if (req.method === "PUT" && path.join("/") === "admin/site-settings") {
+      res.setHeader("Cache-Control", "no-store");
       const heroImage = await uploadImage(req.body?.heroImage, "site");
       const { data, error } = await supabaseAdmin.from("site_settings").upsert({ key: "public-site", hero_image: heroImage }).select().single();
       if (error) throw error;
       return res.json({ heroImage: data.hero_image });
+    }
+    if (req.method === "PUT" && path.join("/") === "admin/site-content") {
+      const body = req.body || {};
+      const paragraphs = Array.isArray(body.aboutParagraphs) ? body.aboutParagraphs.slice(0, 3).map((value: unknown) => String(value).trim().slice(0, 3000)) : defaultSiteContent.aboutParagraphs;
+      const content = {
+        about_paragraphs: paragraphs,
+        projects_completed: String(body.projectsCompleted || "").trim().slice(0, 40),
+        years_experience: String(body.yearsExperience || "").trim().slice(0, 40),
+        email: String(body.email || "").trim().slice(0, 254),
+        phone: String(body.phone || "").trim().slice(0, 60),
+      };
+      if (!content.email || !content.phone || !content.projects_completed || !content.years_experience || paragraphs.length !== 3 || paragraphs.some((text: string) => !text)) {
+        return res.status(400).json({ message: "Complete all About, statistics, phone and email fields." });
+      }
+      const { data: currentSettings, error: currentError } = await supabaseAdmin.from("site_settings").select("hero_image").eq("key", "public-site").maybeSingle();
+      if (currentError) throw currentError;
+      const { data, error } = await supabaseAdmin.from("site_settings").upsert({ key: "public-site", hero_image: currentSettings?.hero_image || defaultHeroImage, ...content }).select("about_paragraphs, projects_completed, years_experience, email, phone").single();
+      if (error) throw error;
+      return res.json(siteContentOut(data));
     }
     return res.status(404).json({ message: "Not found" });
   } catch (error) {

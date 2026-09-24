@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addCategory, createProject, deleteCategory, deleteProject, getAdminSession, getCategories, getProjects, loginAdmin, updateAdminPassword, updateProject, updateSiteSettings, type Category, type Project } from "../lib/api";
+import { addCategory, createProject, deleteCategory, deleteProject, getAdminSession, getCategories, getProjects, getSiteContent, loginAdmin, updateAdminPassword, updateProject, updateSiteContent, updateSiteSettings, type Category, type Project, type SiteContent } from "../lib/api";
+import BrandLogo from "../components/BrandLogo";
 
-type AdminView = "dashboard" | "projects" | "new-project" | "edit-project" | "categories" | "site-settings" | "account";
+type AdminView = "dashboard" | "projects" | "new-project" | "edit-project" | "categories" | "site-settings" | "site-content" | "account";
 
 type AdminSession = {
   token: string;
@@ -20,13 +21,13 @@ const STORAGE_KEYS = {
 };
 
 const Icon = {
-  grid: "⊞",
-  folder: "◫",
-  tag: "◈",
-  eye: "◎",
-  logout: "◁",
+  grid: "\u229e",
+  folder: "\u25eb",
+  tag: "\u25c8",
+  eye: "\u25ce",
+  logout: "\u25c1",
   plus: "+",
-  trash: "✕",
+  trash: "\u2715",
 };
 
 function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
@@ -56,12 +57,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
     <div className="min-h-screen bg-[#0c0b09] flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-[#11100d] border border-[#282318] p-8">
         <div className="flex flex-col items-center mb-8">
-          <svg width="36" height="36" viewBox="0 0 28 28" fill="none" className="mb-4">
-            <rect x="1" y="1" width="26" height="26" stroke="#c9a46a" strokeWidth="1.5" />
-            <rect x="5" y="5" width="18" height="18" fill="#c9a46a" fillOpacity="0.12" />
-            <line x1="1" y1="14" x2="27" y2="14" stroke="#c9a46a" strokeWidth="0.8" />
-            <line x1="14" y1="1" x2="14" y2="27" stroke="#c9a46a" strokeWidth="0.8" />
-          </svg>
+          <BrandLogo compact className="mb-4" />
           <h1 className="text-[13px] tracking-[0.4em] uppercase text-[#f0e8d5]/60" style={{ fontFamily: "var(--font-sans)" }}>Red Door Studio</h1>
           <p className="text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e] mt-1" style={{ fontFamily: "var(--font-sans)" }}>Admin Portal</p>
         </div>
@@ -112,7 +108,8 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
     { id: "dashboard", label: "Dashboard", icon: Icon.grid },
     { id: "projects", label: "Projects", icon: Icon.folder },
     { id: "categories", label: "Categories", icon: Icon.tag },
-    { id: "site-settings", label: "Site Settings", icon: "◉" },
+    { id: "site-settings", label: "Site Settings", icon: "\u25ce" },
+    { id: "site-content", label: "About & Contact", icon: "◉" },
     { id: "account", label: "Account", icon: "●" },
   ];
 
@@ -120,12 +117,7 @@ function Sidebar({ view, setView, onLogout }: { view: AdminView; setView: (v: Ad
     <aside className="w-full md:w-[220px] shrink-0 bg-[#0e0d0b] border-b md:border-b-0 md:border-r border-[#282318] flex flex-col md:h-full">
       <div className="px-6 py-5 border-b border-[#282318]">
         <div className="flex items-center gap-2">
-          <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
-            <rect x="1" y="1" width="26" height="26" stroke="#c9a46a" strokeWidth="1.2" />
-            <rect x="5" y="5" width="18" height="18" fill="#c9a46a" fillOpacity="0.1" />
-            <line x1="1" y1="14" x2="27" y2="14" stroke="#c9a46a" strokeWidth="0.6" />
-            <line x1="14" y1="1" x2="14" y2="27" stroke="#c9a46a" strokeWidth="0.6" />
-          </svg>
+          <BrandLogo compact />
           <div>
             <p className="text-[10px] tracking-[0.3em] uppercase text-[#c9a46a]" style={{ fontFamily: "var(--font-sans)" }}>RDS</p>
             <p className="text-[8px] tracking-[0.2em] uppercase text-[#3a3530]" style={{ fontFamily: "var(--font-sans)" }}>Admin</p>
@@ -618,7 +610,7 @@ function SiteSettingsManager() {
     setMessage("");
     try {
       await updateSiteSettings({ heroImage });
-      setMessage("Hero image saved. Refresh the public site to see it.");
+      setMessage("Hero image saved and updated on the public site.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not save the hero image.");
     } finally {
@@ -646,6 +638,50 @@ function SiteSettingsManager() {
   );
 }
 
+function SiteContentManager() {
+  const [content, setContent] = useState<SiteContent | null>(null);
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { void getSiteContent().then(setContent); }, []);
+
+  const save = async () => {
+    if (!content) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      setContent(await updateSiteContent(content));
+      setMessage("About and contact details saved.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save site content.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!content) return <div className="flex-1 p-8 text-sm text-[#7a6e5e]">Loading site content...</div>;
+  const inputClass = "w-full border border-[#282318] bg-[#0c0b09] px-4 py-3 text-[13px] text-[#f0e8d5] focus:border-[#c9a46a] focus:outline-none";
+  const labelClass = "mb-2 block text-[10px] tracking-[0.3em] uppercase text-[#7a6e5e]";
+  return (
+    <div className="flex-1 overflow-auto p-4 md:p-8">
+      <div className="mb-8"><h1 className="text-2xl font-light text-[#f0e8d5]" style={{ fontFamily: "var(--font-display)" }}>About & Contact</h1><p className="mt-1 text-[12px] text-[#7a6e5e]">Edit the public About text, experience statistics and contact details.</p></div>
+      <div className="max-w-3xl space-y-6">
+        <section className="space-y-4 border border-[#282318] bg-[#141210] p-5">
+          <h2 className="text-[11px] tracking-[0.25em] uppercase text-[#c9a46a]">About text</h2>
+          {content.aboutParagraphs.map((paragraph, index) => <div key={index}><label className={labelClass}>Paragraph {index + 1}</label><textarea rows={4} className={inputClass} value={paragraph} onChange={(event) => setContent({ ...content, aboutParagraphs: content.aboutParagraphs.map((value, i) => i === index ? event.target.value : value) })} /></div>)}
+        </section>
+        <section className="grid gap-4 sm:grid-cols-2 border border-[#282318] bg-[#141210] p-5">
+          <h2 className="sm:col-span-2 text-[11px] tracking-[0.25em] uppercase text-[#c9a46a]">Studio information</h2>
+          <div><label className={labelClass}>Projects completed</label><input className={inputClass} value={content.projectsCompleted} onChange={(event) => setContent({ ...content, projectsCompleted: event.target.value })} /></div>
+          <div><label className={labelClass}>Years of experience</label><input className={inputClass} value={content.yearsExperience} onChange={(event) => setContent({ ...content, yearsExperience: event.target.value })} /></div>
+          <div><label className={labelClass}>Phone / WhatsApp</label><input type="tel" className={inputClass} value={content.phone} onChange={(event) => setContent({ ...content, phone: event.target.value })} /></div>
+          <div><label className={labelClass}>Email</label><input type="email" className={inputClass} value={content.email} onChange={(event) => setContent({ ...content, email: event.target.value })} /></div>
+        </section>
+        {message && <p className="text-[11px] text-[#c9a46a]">{message}</p>}
+        <button type="button" onClick={() => void save()} disabled={saving} className="bg-[#c9a46a] px-6 py-3 text-[11px] tracking-[0.25em] uppercase text-[#0c0b09] hover:bg-[#b8904f] disabled:opacity-60">{saving ? "Saving..." : "Save About & Contact"}</button>
+      </div>
+    </div>
+  );
+}
 export default function Admin() {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -736,6 +772,7 @@ export default function Admin() {
           {view === "categories" && <CategoriesManager categories={categories} onAdded={handleCategoryAdded} onDeleted={(id) => setCategories((current) => current.filter((category) => category.id !== id))} />}
           {view === "account" && <AccountManager />}
           {view === "site-settings" && <SiteSettingsManager />}
+          {view === "site-content" && <SiteContentManager />}
         </div>
       </main>
     </div>

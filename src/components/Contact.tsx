@@ -1,11 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { STUDIO } from "../data";
+import { getSiteContent } from "../lib/api";
 import { useReveal } from "./useReveal";
 
 export default function Contact() {
   const ref = useReveal();
   const btnRef = useRef<HTMLButtonElement>(null);
   const [btnPos, setBtnPos] = useState({ x: 0, y: 0 });
+  const [contact, setContact] = useState({ email: STUDIO.email, phone: STUDIO.phone });
+  useEffect(() => { void getSiteContent().then(setContact); }, []);
 
   const onMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -53,7 +56,7 @@ export default function Contact() {
                 }}
                 onMouseMove={onMouseMove}
                 onMouseLeave={onMouseLeave}
-                onClick={() => window.open(`https://wa.me/${STUDIO.whatsapp}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
+                onClick={() => window.open(`https://wa.me/${contact.phone.replace(/\D/g, "")}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
               >
                 <span className="relative z-10 transition-colors duration-300 group-hover:text-[#0c0b09]">
                   Book a Consultation
@@ -109,13 +112,13 @@ export default function Contact() {
             {[
               {
                 label: "Email",
-                value: STUDIO.email,
-                href: `mailto:${STUDIO.email}`,
+                value: contact.email,
+                href: `mailto:${contact.email}`,
               },
               {
                 label: "Phone",
-                value: STUDIO.phone,
-                href: `tel:${STUDIO.phone.replace(/\s/g, "")}`,
+                value: contact.phone,
+                href: `tel:${contact.phone.replace(/\s/g, "")}`,
               },
               {
                 label: "Studio Address",

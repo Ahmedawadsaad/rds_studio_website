@@ -1,10 +1,12 @@
-import { CATEGORIES as fallbackCategories, PROJECTS as fallbackProjects, type Category, type Project } from "../data";
+import { CATEGORIES as fallbackCategories, PROJECTS as fallbackProjects, DEFAULT_SITE_CONTENT, type Category, type Project } from "../data";
 
 export type { Category, Project };
+export type SiteContent = typeof DEFAULT_SITE_CONTENT;
 
 const API_BASE = "/api";
 const projectCache = new Map<string, Project>();
 const projectRequests = new Map<string, Promise<Project>>();
+let siteContentRequest: Promise<SiteContent> | undefined;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -87,16 +89,38 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function getSiteSettings() {
-  return request<{ heroImage: string }>("/site-settings");
+  return request<{ heroImage: string }>("/site-settings", { cache: "no-store" });
 }
 
-export async function updateSiteSettings(payload: { heroImage: string }) {
+export async function getSiteContent(): Promise<SiteContent> {
+  if (!siteContentRequest) {
+    siteContentRequest = request<Partial<SiteContent>>("/site-content", { cache: "no-store" })
+      .then((content) => ({ ...DEFAULT_SITE_CONTENT, ...content }))
+      .catch(() => DEFAULT_SITE_CONTENT);
+  }
+  return siteContentRequest;
+}
+
+export async function updateSiteContent(payload: SiteContent): Promise<SiteContent> {
   const token = localStorage.getItem("rds-admin-token");
-  return request<{ heroImage: string }>("/admin/site-settings", {
+  const saved = await request<SiteContent>("/admin/site-content", {
     method: "PUT",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: JSON.stringify(payload),
   });
+  siteContentRequest = Promise.resolve(saved);
+  return saved;
+}
+
+export async function updateSiteSettings(payload: { heroImage: string }) {
+  const token = localStorage.getItem("rds-admin-token");
+  const saved = await request<{ heroImage: string }>("/admin/site-settings", {
+    method: "PUT",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify(payload),
+  });
+  window.dispatchEvent(new CustomEvent("rds:site-settings-updated", { detail: saved }));
+  return saved;
 }
 
 export async function loginAdmin(email: string, password: string) {

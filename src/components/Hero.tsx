@@ -70,7 +70,19 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
-    getSiteSettings().then((settings) => setHeroImage(settings.heroImage)).catch(() => undefined);
+    let active = true;
+    const applySettings = (event: Event) => {
+      const settings = (event as CustomEvent<{ heroImage?: string }>).detail;
+      if (settings?.heroImage) setHeroImage(settings.heroImage);
+    };
+    window.addEventListener("rds:site-settings-updated", applySettings);
+    getSiteSettings().then((settings) => {
+      if (active && settings.heroImage) setHeroImage(settings.heroImage);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+      window.removeEventListener("rds:site-settings-updated", applySettings);
+    };
   }, []);
 
   useEffect(() => {

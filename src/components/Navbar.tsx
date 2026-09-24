@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { STUDIO } from "../data";
+import { getSiteContent } from "../lib/api";
 import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("rds-theme") || "dark");
+  const [contactPhone, setContactPhone] = useState(STUDIO.phone);
   const location = useLocation();
 
   useEffect(() => {
@@ -14,6 +16,8 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => { void getSiteContent().then(({ phone }) => setContactPhone(phone)); }, []);
 
   const scrollTo = (id: string) => {
     setMenuOpen(false);
@@ -71,7 +75,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           {!isAdmin && (
             <button
-              onClick={() => window.open(`https://wa.me/${STUDIO.whatsapp}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
+              onClick={() => window.open(`https://wa.me/${contactPhone.replace(/\D/g, "")}?text=${encodeURIComponent("Hello Red Door Studio, I would like to book a consultation.")}`, "_blank", "noopener,noreferrer")}
               className="nav-consultation hidden md:block text-[11px] tracking-[0.25em] uppercase border border-[#c9a46a]/40 text-[#c9a46a] px-5 py-2 hover:bg-[#c9a46a] hover:text-[#0c0b09] transition-all duration-300"
               style={{ fontFamily: "var(--font-sans)" }}
             >

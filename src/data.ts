@@ -43,6 +43,20 @@ export const STUDIO = {
   facebook: "https://www.facebook.com/Reddoorstudio25",
 };
 
+export const DEFAULT_ABOUT_PARAGRAPHS = [
+  "Red Door Studio was founded in Cairo with a single conviction: that every Egyptian family deserves a home designed with the same rigour and sensitivity as the great houses of the Mediterranean. We do not separate architecture from interior design — they are one discipline.",
+  "Our process begins with listening. We map the way you move through your days — morning light at breakfast, evening gathering in the kitchen, the quality of silence in a bedroom — and translate those rhythms into floor plans, volumes, and materials.",
+  "The palette we return to — black Marquina marble, custom walnut millwork, brushed brass, olive cabinetry — is not a signature style imposed on clients. It is a vocabulary we reach for because these materials age honestly, photograph beautifully, and endure.",
+];
+
+export const DEFAULT_SITE_CONTENT = {
+  aboutParagraphs: DEFAULT_ABOUT_PARAGRAPHS,
+  projectsCompleted: "60+",
+  yearsExperience: "8",
+  email: STUDIO.email,
+  phone: STUDIO.phone,
+};
+
 export const CATEGORIES: Category[] = [
   { id: "all", name: "All Projects", count: 6 },
   { id: "villas", name: "Villas", count: 3 },
