@@ -62,7 +62,7 @@ export default function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [drawing, setDrawing] = useState(false);
-  const [heroImage, setHeroImage] = useState("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=2400&h=1400&fit=crop&auto=format");
+  const [heroImage, setHeroImage] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setDrawing(true), 400);
@@ -71,13 +71,17 @@ export default function Hero() {
 
   useEffect(() => {
     let active = true;
+    let receivedLiveUpdate = false;
     const applySettings = (event: Event) => {
       const settings = (event as CustomEvent<{ heroImage?: string }>).detail;
-      if (settings?.heroImage) setHeroImage(settings.heroImage);
+      if (settings?.heroImage) {
+        receivedLiveUpdate = true;
+        setHeroImage(settings.heroImage);
+      }
     };
     window.addEventListener("rds:site-settings-updated", applySettings);
     getSiteSettings().then((settings) => {
-      if (active && settings.heroImage) setHeroImage(settings.heroImage);
+      if (active && !receivedLiveUpdate && settings.heroImage) setHeroImage(settings.heroImage);
     }).catch(() => undefined);
     return () => {
       active = false;
@@ -115,12 +119,14 @@ export default function Hero() {
           className="absolute inset-0 transition-none"
           style={{ opacity: photoOpacity }}
         >
-          <img
-            src={heroImage}
-            alt="Red Door Studio villa"
-            className="w-full h-full object-cover"
-            style={{ transform: `scale(${photoScale})`, transformOrigin: "center center" }}
-          />
+          {heroImage && (
+            <img
+              src={heroImage}
+              alt="Red Door Studio villa"
+              className="w-full h-full object-cover"
+              style={{ transform: `scale(${photoScale})`, transformOrigin: "center center" }}
+            />
+          )}
           {/* Darkening overlay — lightens as photo appears for drama */}
           <div
             className="absolute inset-0"
