@@ -63,6 +63,7 @@ export default function Hero() {
   const [progress, setProgress] = useState(0);
   const [drawing, setDrawing] = useState(false);
   const [heroImage, setHeroImage] = useState("");
+  const [requestedHeroImage, setRequestedHeroImage] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setDrawing(true), 400);
@@ -76,18 +77,35 @@ export default function Hero() {
       const settings = (event as CustomEvent<{ heroImage?: string }>).detail;
       if (settings?.heroImage) {
         receivedLiveUpdate = true;
-        setHeroImage(settings.heroImage);
+        setRequestedHeroImage(settings.heroImage);
       }
     };
     window.addEventListener("rds:site-settings-updated", applySettings);
     getSiteSettings().then((settings) => {
-      if (active && !receivedLiveUpdate && settings.heroImage) setHeroImage(settings.heroImage);
+      if (active && !receivedLiveUpdate && settings.heroImage) setRequestedHeroImage(settings.heroImage);
     }).catch(() => undefined);
     return () => {
       active = false;
       window.removeEventListener("rds:site-settings-updated", applySettings);
     };
   }, []);
+
+  // Preload a replacement before swapping it in. Browsers may keep showing the
+  // previous image while a new src is loading, which looks like a stale hero.
+  useEffect(() => {
+    if (!requestedHeroImage) return;
+    let active = true;
+    const image = new Image();
+    image.onload = () => {
+      if (active) setHeroImage(requestedHeroImage);
+    };
+    image.src = requestedHeroImage;
+    if (image.complete && image.naturalWidth > 0) setHeroImage(requestedHeroImage);
+    return () => {
+      active = false;
+      image.onload = null;
+    };
+  }, [requestedHeroImage]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -99,6 +117,7 @@ export default function Hero() {
       const max = h - vh;
       setProgress(Math.max(0, Math.min(1, scrolled / max)));
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
