@@ -4,6 +4,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReveal } from "../components/useReveal";
 import { cacheProject, getProject, type Project } from "../lib/api";
 import { PROJECTS } from "../data";
+import { WIDE_WIDTHS, imageSrcSet, optimizedImage } from "../lib/images";
+
+const GALLERY_SIZES = "(min-width: 1200px) 1136px, 100vw";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +20,12 @@ export default function ProjectDetail() {
   const [contentView, setContentView] = useState<ContentView>("overview");
   const [entered, setEntered] = useState(false);
   const revealRef = useReveal();
+
+  const goBack = () => {
+    // Return to the exact grid position when we came from the site; otherwise open the grid.
+    if ((window.history.state as { idx?: number } | null)?.idx) navigate(-1);
+    else navigate("/", { state: { fromProject: true } });
+  };
 
   useEffect(() => {
     const loadProject = async () => {
@@ -74,7 +83,7 @@ export default function ProjectDetail() {
     >
       <div className="detail-topbar fixed top-0 left-0 right-0 z-50 flex h-[68px] items-center gap-2 border-b border-[#282318] bg-[#0c0b09]/90 px-4 backdrop-blur-md sm:gap-4 sm:px-8">
         <button
-          onClick={() => navigate("/")}
+          onClick={goBack}
           className="detail-back-button flex items-center gap-2 text-[9px] tracking-[0.18em] uppercase text-[#7a6e5e] transition-colors hover:text-[#c9a46a] sm:gap-3 sm:text-[11px] sm:tracking-[0.3em]"
           style={{ fontFamily: "var(--font-sans)" }}
         >
@@ -92,7 +101,9 @@ export default function ProjectDetail() {
 
       <div className="relative overflow-hidden bg-[#141210] pt-[68px]">
         <img
-          src={project.heroImage}
+          src={optimizedImage(project.heroImage, 1920)}
+          srcSet={imageSrcSet(project.heroImage, WIDE_WIDTHS)}
+          sizes="100vw"
           alt={project.name}
           fetchPriority="high"
           decoding="async"
@@ -170,7 +181,7 @@ export default function ProjectDetail() {
             project.rooms.map((room, ri) => <RoomSection key={room.name} room={room} index={ri} />)
           ) : (
             <div className="relative overflow-hidden border border-[#282318] bg-[#141210]">
-              <img src={project.heroImage} alt={`${project.name} full project`} decoding="async" className="block h-auto max-h-[75svh] w-full object-contain" />
+              <img src={optimizedImage(project.heroImage, 1920)} srcSet={imageSrcSet(project.heroImage, WIDE_WIDTHS)} sizes={GALLERY_SIZES} alt={`${project.name} full project`} loading="lazy" decoding="async" className="block h-auto max-h-[75svh] w-full object-contain" />
             </div>
           )}
         </div>
@@ -204,7 +215,9 @@ export default function ProjectDetail() {
 
           <div className="relative aspect-[16/9] bg-[#141210] overflow-hidden border border-[#282318]">
             <img
-              src={project.floorPlans[floorTab].image}
+              src={optimizedImage(project.floorPlans[floorTab].image, 1920)}
+              srcSet={imageSrcSet(project.floorPlans[floorTab].image, WIDE_WIDTHS)}
+              sizes={GALLERY_SIZES}
               alt={project.floorPlans[floorTab].label}
               className="w-full h-full object-cover transition-opacity duration-300"
               style={{ filter: "brightness(0.85) contrast(1.1)" }}
@@ -245,6 +258,13 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
   const [visible, setVisible] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  // Only fetch slides that have been shown, plus the next one so the arrow feels instant.
+  const [seenImages, setSeenImages] = useState(() => new Set([0]));
+  const nextImage = (activeImage + 1) % room.images.length;
+
+  useEffect(() => {
+    setSeenImages((current) => (current.has(activeImage) ? current : new Set(current).add(activeImage)));
+  }, [activeImage]);
 
   useEffect(() => {
     const el = ref.current;
@@ -283,10 +303,14 @@ function RoomSection({ room, index }: { room: { name: string; images: string[]; 
       </div>
 
       <div className="relative aspect-[16/9] overflow-hidden bg-[#141210]">
-        {room.images.map((image, imageIndex) => (
+        {room.images.map((image, imageIndex) => (seenImages.has(imageIndex) || (visible && imageIndex === nextImage)) && (
           <img
             key={image}
-            src={image}
+            src={optimizedImage(image, 1920)}
+            srcSet={imageSrcSet(image, WIDE_WIDTHS)}
+            sizes={GALLERY_SIZES}
+            loading="lazy"
+            decoding="async"
             alt={`${room.name} ${imageIndex + 1}`}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out ${
               imageIndex === activeImage ? "opacity-100" : "opacity-0"

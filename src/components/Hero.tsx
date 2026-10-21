@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { STUDIO } from "../data";
 import { getSiteSettings } from "../lib/api";
+import { WIDE_WIDTHS, imageSrcSet, optimizedImage } from "../lib/images";
 
 /* Contemporary villa elevation paths — each draws in sequence */
 const VILLA_PATHS: { d: string; delay: number }[] = [
@@ -140,7 +141,9 @@ export default function Hero() {
         >
           {heroImage && (
             <img
-              src={heroImage}
+              src={optimizedImage(heroImage, 1920)}
+              srcSet={imageSrcSet(heroImage, WIDE_WIDTHS)}
+              sizes="100vw"
               alt="Red Door Studio villa"
               className="w-full h-full object-cover"
               style={{ transform: `scale(${photoScale})`, transformOrigin: "center center" }}

@@ -7,6 +7,8 @@ const API_BASE = "/api";
 const projectCache = new Map<string, Project>();
 const projectRequests = new Map<string, Promise<Project>>();
 let siteContentRequest: Promise<SiteContent> | undefined;
+let projectListCache: Project[] | undefined;
+let categoryListCache: Category[] | undefined;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
@@ -43,11 +45,22 @@ export async function getProjects(): Promise<Project[]> {
   try {
     const projects = await request<Project[]>("/projects");
     projects.forEach((project) => projectCache.set(project.id, project));
+    projectListCache = projects;
     return projects;
   } catch {
     fallbackProjects.forEach((project) => projectCache.set(project.id, project));
+    projectListCache = fallbackProjects;
     return fallbackProjects;
   }
+}
+
+// Last loaded list, so the grid can render instantly when returning from a project.
+export function getCachedProjects() {
+  return projectListCache;
+}
+
+export function getCachedCategories() {
+  return categoryListCache;
 }
 
 export async function getProject(id: string): Promise<Project> {
@@ -87,6 +100,7 @@ export function prefetchProject(id: string) {
 export async function getCategories(): Promise<Category[]> {
   try {
     const categories = await request<Category[]>("/categories");
+    if (categories.length) categoryListCache = categories;
     return categories.length ? categories : fallbackCategories;
   } catch {
     return fallbackCategories;

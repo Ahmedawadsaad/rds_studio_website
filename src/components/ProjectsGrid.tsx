@@ -1,47 +1,105 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { cacheProject, getCategories, getProjects, prefetchProject, type Category, type Project } from "../lib/api";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { cacheProject, getCachedCategories, getCachedProjects, getCategories, getProjects, prefetchProject, type Category, type Project } from "../lib/api";
+import { CARD_WIDTHS, imageSrcSet, optimizedImage } from "../lib/images";
 
 const defaultCategories: Category[] = [
   { id: "all", name: "All Projects", count: 0 },
 ];
 
+// Where the visitor was in the grid when they opened a project, so Back returns them there.
+const RETURN_KEY = "rds-projects-return";
+type ReturnState = { y: number; category: string };
+
+function readReturnState(): ReturnState | null {
+  try {
+    const raw = sessionStorage.getItem(RETURN_KEY);
+    return raw ? (JSON.parse(raw) as ReturnState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearReturnState() {
+  try {
+    sessionStorage.removeItem(RETURN_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
+function saveReturnState(state: ReturnState) {
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify(state));
+  } catch {
+    // Storage unavailable; Back will land at the top of the grid instead.
+  }
+}
+
+function buildCategories(projects: Project[], categories: Category[]) {
+  return [
+    { id: "all", name: "All Projects", count: projects.length },
+    ...categories.filter((category) => category.id !== "all"),
+  ];
+}
+
+function filterProjects(projects: Project[], category: string) {
+  return category === "all" ? projects : projects.filter((p) => p.category === category);
+}
+
 export default function ProjectsGrid() {
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [displayed, setDisplayed] = useState<Project[]>([]);
+  const navigationType = useNavigationType();
+  const location = useLocation();
+  const [returnState] = useState(() => {
+    const saved = readReturnState();
+    if ((location.state as { fromProject?: boolean } | null)?.fromProject) return saved || { y: -1, category: "all" };
+    return navigationType === "POP" ? saved : null;
+  });
+  const [cachedProjects] = useState(getCachedProjects);
+  const [activeCategory, setActiveCategory] = useState(returnState?.category || "all");
+  const [projects, setProjects] = useState<Project[]>(cachedProjects || []);
+  const [categories, setCategories] = useState<Category[]>(() =>
+    cachedProjects ? buildCategories(cachedProjects, getCachedCategories() || []) : defaultCategories
+  );
+  const [displayed, setDisplayed] = useState<Project[]>(() => filterProjects(cachedProjects || [], activeCategory));
   const [animating, setAnimating] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const projectsRef = useRef(projects);
+  const categoryRef = useRef(activeCategory);
+  const restoredRef = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    clearReturnState();
     const load = async () => {
       const [projectData, categoryData] = await Promise.all([getProjects(), getCategories()]);
-      const nextCategories = [
-        { id: "all", name: "All Projects", count: projectData.length },
-        ...categoryData.filter((category) => category.id !== "all"),
-      ];
+      projectsRef.current = projectData;
       setProjects(projectData);
-      setCategories(nextCategories);
-      setDisplayed(activeCategory === "all" ? projectData : projectData.filter((p) => p.category === activeCategory));
+      setCategories(buildCategories(projectData, categoryData));
+      setDisplayed(filterProjects(projectData, categoryRef.current));
     };
 
     load();
   }, []);
 
   useEffect(() => {
+    if (categoryRef.current === activeCategory) return;
+    categoryRef.current = activeCategory;
     setAnimating(true);
     const t = setTimeout(() => {
-      setDisplayed(
-        activeCategory === "all"
-          ? projects
-          : projects.filter((p) => p.category === activeCategory)
-      );
+      setDisplayed(filterProjects(projectsRef.current, activeCategory));
       setAnimating(false);
     }, 220);
     return () => clearTimeout(t);
-  }, [activeCategory, projects]);
+  }, [activeCategory]);
+
+  // Restore the grid position once the cards are on the page, before the browser paints.
+  useLayoutEffect(() => {
+    if (!returnState || restoredRef.current || displayed.length === 0) return;
+    restoredRef.current = true;
+    const top = returnState.y >= 0 ? returnState.y : (sectionRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
+    window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+  }, [displayed, returnState]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -101,6 +159,7 @@ export default function ProjectsGrid() {
             project={project}
             index={i}
             onOpen={() => {
+              saveReturnState({ y: window.scrollY, category: activeCategory });
               cacheProject(project);
               navigate(`/project/${project.id}`, { state: { project } });
             }}
@@ -156,7 +215,9 @@ function ProjectCard({
       data-cursor="Open"
     >
       <img
-        src={project.thumbnail}
+        src={optimizedImage(project.thumbnail, 828)}
+        srcSet={imageSrcSet(project.thumbnail, CARD_WIDTHS)}
+        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
         alt={project.name}
         loading="lazy"
         decoding="async"
