@@ -36,6 +36,16 @@ function saveReturnState(state: ReturnState) {
   }
 }
 
+// The site sets `scroll-behavior: smooth` on <html>, and older Safari rejects
+// `behavior: "instant"`, so switch smoothing off around a plain scrollTo.
+function jumpTo(top: number) {
+  const root = document.documentElement;
+  const previous = root.style.scrollBehavior;
+  root.style.scrollBehavior = "auto";
+  window.scrollTo(0, top);
+  root.style.scrollBehavior = previous;
+}
+
 function buildCategories(projects: Project[], categories: Category[]) {
   return [
     { id: "all", name: "All Projects", count: projects.length },
@@ -98,7 +108,12 @@ export default function ProjectsGrid() {
     if (!returnState || restoredRef.current || displayed.length === 0) return;
     restoredRef.current = true;
     const top = returnState.y >= 0 ? returnState.y : (sectionRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
-    window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+    jumpTo(top);
+    // Mobile browsers can still be settling layout (address bar, fonts) on the first frame.
+    const frame = requestAnimationFrame(() => {
+      if (Math.abs(window.scrollY - top) > 2) jumpTo(top);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [displayed, returnState]);
 
   useEffect(() => {
